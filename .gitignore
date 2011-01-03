@@ -1,0 +1,6 @@
+/.Python
+/bin
+/lib
+/include
+/*.egg
+/*.egg-info

@@ -1,0 +1,55 @@
+* Dream
+
+  Dream is a hyper-minimal framework for creating WSGI apps, which
+  leverages decoroute and WebOb to dispach and abstract requests. It’s
+  particularly good for API type applications, as this is what it was
+  originally written to support.
+
+* Features
+
+** Abstracted away from WSGI
+   You only have to deal with WebOb’s Request objects, and your
+   functions return Response objects.
+
+** Nothing you don’t need
+   Very lightweight. No ORM. No admin page. Just URL routing and
+   request/response objects.
+
+** Per-method endpoints
+   Decoroute has been extended to allow invoking different functions
+   for the same URL based on the request method. This avoids ugly
+   conditional code in your endpoint functions.
+
+** Conveniently namespaced
+   Common classes from WebOb & Decoroute are imported into the =dream=
+   namespace — no need for anything other than =import dream=.
+
+** JSONResponse class
+   
+
+* Crash course
+
+  Write your app:
+#+BEGIN_SRC python
+
+import dream
+
+App = dream.App()
+
+@my_app.expose('/greeting.json')
+def hello_json(request):
+    return dream.JSONResponse(body={'greeting': 'Hello, world!'})
+
+
+@my_app.expose('/greeting.txt)
+def hello_text(request):
+    return dream.Response(body='Hello, world!',
+                          headers={'Content-Type': 'text/plain'})
+
+#+END_SRC
+
+  $ gunicorn my_app.py:App &
+  $ curl -i http://localhost:8080/greeting.json
+  $ curl -i http://localhost:8080/greeting.txt
+
+
