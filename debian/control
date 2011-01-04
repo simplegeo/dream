@@ -1,0 +1,24 @@
+Source: dream
+Section: python
+Priority: extra
+Maintainer: SimpleGeo Nerds <nerds@simplegeo.com>
+Uploaders: Ian Eure <ian@simplegeo.com>
+Build-Depends: cdbs,
+ debhelper (>= 7),
+ python,
+ python-support,
+ python-setuptools,
+ python-nose,
+ python-coverage,
+Standards-Version: 3.8.3
+Homepage: http://github.com/simplegeo/dream
+
+Package: python-dream
+Architecture: all
+Depends: ${shlibs:Depends},
+ ${misc:Depends},
+ python-decoroute,
+ python-webob
+Suggests: gunicorn
+Description: Hyperminimal WSGI framework
+ Dream is a small WSGI framework geared towards building API servers.
