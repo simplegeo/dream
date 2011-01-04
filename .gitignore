@@ -4,5 +4,13 @@
 /include
 /*.egg
 /*.egg-info
+/dist
+/build
+/debian/*stamp*
+/debian/*.debhelper*
+/debian/*.substvars
+/xunit.xml
 /.coverage
+/coverage.xml
 *,cover
+*.pyc
