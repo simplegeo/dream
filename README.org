@@ -25,31 +25,55 @@
    namespace — no need for anything other than =import dream=.
 
 ** JSONResponse class
-   
+   Since returning JSON is a common thing to do with Dream, there’s a
+   Response subclass which will serialize it out for you. If you want
+   a response intended for human consumption, there is also the
+   clunkily-named =HumanReadableJSONResponse=.
+
+** Exception handling
+   Unhanded exceptions are caught and returned as 500 responses, with
+   the exception reason in a JSON payload.
+
+** Endpoint introspection
+   Easily see the endpoints you’ve defined:
+
+
+
 
 * Crash course
 
-  Write your app:
+  Drop this into in =my_app.py=:
 #+BEGIN_SRC python
+  import dream
 
-import dream
+  App = dream.App()
 
-App = dream.App()
-
-@my_app.expose('/greeting.json')
-def hello_json(request):
-    return dream.JSONResponse(body={'greeting': 'Hello, world!'})
+  @App.expose('/greeting.json')
+  def hello_json(request):
+      return dream.JSONResponse(body={'greeting': 'Hello, world!'})
 
 
-@my_app.expose('/greeting.txt)
-def hello_text(request):
-    return dream.Response(body='Hello, world!',
-                          headers={'Content-Type': 'text/plain'})
+  @App.expose('/greeting.txt')
+  def hello_text(request):
+      return dream.Response(body='Hello, world!',
+                            headers={'Content-Type': 'text/plain'})
 
+  @App.expose('/greet/<person:.*>')
+  def hello_user(request, person):
+      return dream.Response(body='Nice to meet you, %s' % person,
+                            headers={'Content-Type': 'text/plain'})
 #+END_SRC
 
-  $ gunicorn my_app.py:App &
+  $ gunicorn my_app:App &
   $ curl -i http://localhost:8080/greeting.json
   $ curl -i http://localhost:8080/greeting.txt
 
 
+* Endpoint introspection
+
+  If you’d like to add an endpoint which returns known endpoints, add
+  the following line:
+
+#+BEGIN_SRC python
+  dream.endpoints(App, '/endpoints.json')
+#+END_SRC
