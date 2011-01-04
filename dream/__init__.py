@@ -7,6 +7,7 @@
 """The core of the CN (Places) API."""
 
 from functools import wraps
+from itertools import chain
 
 import decoroute
 import logging
@@ -125,6 +126,15 @@ class App(decoroute.App):
         self._log_response(env, resp)
         return (resp.status, resp.headers.items(), resp.app_iter)
 
+    def endpoints(self):
+        """Return a dict of registered endpoints."""
+        return dict(
+            chain.from_iterable(
+                (('%s %s' % (meth, pattern), func.__doc__ or "Undocumented.")
+                 for ((func, _), pattern) in
+                 self.map[meth]._endpoints.iteritems())
+                for meth in self.map.iterkeys()))
+
 
 class HTTPExceptionMixin(object):
 
@@ -140,6 +150,14 @@ class HTTPExceptionMixin(object):
         return cls(detail="Caught exception %s: %s" % (
                 type(ex), str(ex)))
 
+
+def endpoints(app, *args, **kwargs):
+    """Create an endpoint which introspects endpoints of an app."""
+
+    @app.expose(*args, **kwargs)
+    def __endpoints__(request):
+        """Returns known endpoints and their docstrings."""
+        return HumanReadableJSONResponse(body=app.endpoints())
 
 
 exc.WSGIHTTPException.__bases__ += (HTTPExceptionMixin,)

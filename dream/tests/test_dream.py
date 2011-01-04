@@ -9,7 +9,8 @@
 import unittest
 import json
 
-from dream import (App, Request, Response, JSONResponse, exc, _wrap_endpoint)
+from dream import (App, Request, Response, JSONResponse, exc,
+                   endpoints, _wrap_endpoint)
 
 
 class WrapEndpointTest(unittest.TestCase):
@@ -163,6 +164,36 @@ class RenderTest(unittest.TestCase):
         headers = dict(out[1])
         self.assertTrue('Content-Type' in headers)
         self.assertEqual(headers['Content-Type'], 'application/json')
+
+
+class GetEndpointsTest(unittest.TestCase):
+
+    """Test _get_endpoints."""
+
+    def setUp(self):
+        self.app = App()
+
+    def test_endpoints(self):
+        self.app.expose('foo')(lambda request: Response())
+        self.app.expose('bar')(lambda request: Response())
+
+        endpoints = self.app.endpoints()
+        self.assertTrue('GET foo' in endpoints.keys())
+        self.assertTrue('GET bar' in endpoints.keys())
+
+
+class EndpointsTest(unittest.TestCase):
+
+    """Test dream.endpoints()"""
+
+    def setUp(self):
+        self.app = App()
+
+    def test_endpoints(self):
+        self.assertTrue('GET /endpoints' not in self.app.endpoints().keys())
+        endpoints(self.app, '/endpoints')
+        self.assertTrue('GET /endpoints' in self.app.endpoints().keys())
+
 
 
 if __name__ == '__main__':
