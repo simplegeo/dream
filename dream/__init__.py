@@ -4,7 +4,7 @@
 # Author: Ian Eure <ian@simplegeo.com>
 #
 
-"""The core of the CN (Places) API."""
+"""Dream, a hyperminimal WSGI framework."""
 
 from functools import wraps
 from itertools import chain
