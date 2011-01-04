@@ -4,3 +4,5 @@
 /include
 /*.egg
 /*.egg-info
+/.coverage
+*,cover
