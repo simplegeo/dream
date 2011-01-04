@@ -9,7 +9,8 @@
 import unittest
 import json
 
-from dream import (App, Request, Response, JSONResponse, exc,
+from dream import (App, Request, Response, JSONResponse,
+                   HumanReadableJSONResponse, exc,
                    endpoints, _wrap_endpoint)
 
 
@@ -77,18 +78,24 @@ class JSONResponseTest(unittest.TestCase):
 
     """Test the JSONResponse."""
 
+    resp_class = JSONResponse
+
     def test_content_type(self):
         """Make sure a content-type is set."""
         body = {'foo': 'bar'}
-        resp = JSONResponse(body=body)
+        resp = self.resp_class(body=body)
         self.assert_(
             resp.content_type.startswith('application/json'))
 
     def test_body(self):
         """Make sure a content-type is set."""
         body = {'foo': 'bar'}
-        resp = JSONResponse(body=body)
+        resp = self.resp_class(body=body)
         self.assert_(json.loads(resp.body) == body)
+
+
+class HumanReadableJSONResponseTest(JSONResponseTest):
+    resp_class = HumanReadableJSONResponse
 
 
 class TestExpose(unittest.TestCase):
@@ -165,6 +172,12 @@ class RenderTest(unittest.TestCase):
         self.assertTrue('Content-Type' in headers)
         self.assertEqual(headers['Content-Type'], 'application/json')
 
+    def test_bad_response(self):
+        resp = self.app._render({}, "foo")
+        self.assertTrue(isinstance(resp, tuple))
+        self.assertTrue(resp[0].startswith("500"))
+
+
 
 class GetEndpointsTest(unittest.TestCase):
 
@@ -188,12 +201,41 @@ class EndpointsTest(unittest.TestCase):
 
     def setUp(self):
         self.app = App()
+        endpoints(self.app, '/endpoints')
 
     def test_endpoints(self):
-        self.assertTrue('GET /endpoints' not in self.app.endpoints().keys())
-        endpoints(self.app, '/endpoints')
         self.assertTrue('GET /endpoints' in self.app.endpoints().keys())
 
+    def test_endpoints_reponse(self):
+        self.assertTrue(isinstance(
+                self.app.route({'REQUEST_METHOD': 'GET',
+                                'PATH_INFO': '/endpoints'}),
+                HumanReadableJSONResponse))
+
+
+class RouteTest(unittest.TestCase):
+
+    """Test App.route()."""
+
+    def test_prefix_404(self):
+        app = App(prefix='/1.0')
+        self.assertRaises(exc.HTTPNotFound, app.route,
+                          {'REQUEST_METHOD': 'GET',
+                           'PATH_INFO': '/foo'})
+
+    def test_nonprefix_404(self):
+        app = App()
+        self.assertRaises(exc.HTTPNotFound, app.route,
+                          {'REQUEST_METHOD': 'GET',
+                           'PATH_INFO': '/foo'})
+
+    def test_success(self):
+        response = Response(body="Hi")
+        app = App()
+        app.expose('/')(lambda request: response)
+        resp = app.route({'REQUEST_METHOD': 'GET',
+                           'PATH_INFO': '/'})
+        self.assertTrue(resp is response)
 
 
 if __name__ == '__main__':

@@ -9,6 +9,7 @@
 from functools import wraps
 from itertools import chain
 
+import sys
 import decoroute
 import logging
 import json
@@ -81,9 +82,13 @@ class App(decoroute.App):
         env[self._key] = self
         path, n = self._prefix[1].subn('', env['PATH_INFO'])
         if n != 1:
-            raise decoroute.NotFound()
+            raise exc.HTTPNotFound()
 
-        endpoint, kw = self.map[env['REQUEST_METHOD']].route(path)
+        try:
+            endpoint, kw = self.map[env['REQUEST_METHOD']].route(path)
+        except decoroute.NotFound, nf:
+            raise (exc.HTTPNotFound(" ".join(nf.args)), None,
+                   getattr(sys, 'last_traceback', None))
         return endpoint(env, **kw)
 
     def expose(self, pattern, method="GET", **kw):
@@ -161,3 +166,4 @@ def endpoints(app, *args, **kwargs):
 
 
 exc.WSGIHTTPException.__bases__ += (HTTPExceptionMixin,)
+#decoroute.NotFound = exc.HTTPNotFound
