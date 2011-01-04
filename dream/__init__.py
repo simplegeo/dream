@@ -170,4 +170,3 @@ def endpoints(app, *args, **kwargs):
 
 
 exc.WSGIHTTPException.__bases__ += (HTTPExceptionMixin,)
-#decoroute.NotFound = exc.HTTPNotFound
