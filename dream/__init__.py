@@ -10,10 +10,10 @@ from functools import wraps
 from itertools import chain
 
 import sys
-import decoroute
 import logging
 import json
 
+import decoroute
 from webob import Request, Response, exc
 
 
