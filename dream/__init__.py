@@ -80,25 +80,26 @@ class App(decoroute.App):
         Checks the method-specific map first, then the global as a fallback.
         """
         env[self._key] = self
-        path, n = self._prefix[1].subn('', env['PATH_INFO'])
-        if n != 1:
+        path, num = self._prefix[1].subn('', env['PATH_INFO'])
+        if num != 1:
             raise exc.HTTPNotFound()
 
         try:
-            endpoint, kw = self.map[env['REQUEST_METHOD']].route(path)
-        except decoroute.NotFound, nf:
-            raise (exc.HTTPNotFound(" ".join(nf.args)), None,
-                   getattr(sys, 'last_traceback', None))
-        return endpoint(env, **kw)
+            endpoint, kwargs = self.map[env['REQUEST_METHOD']].route(path)
+        except decoroute.NotFound, nfex:
+            raise exc.HTTPNotFound(" ".join(nfex.args)), None, \
+                getattr(sys, 'last_traceback', None)
+        return endpoint(env, **kwargs)
 
-    def expose(self, pattern, method="GET", **kw):
+    def expose(self, pattern, method="GET", **kwargs):
         """Register a URL pattern for a specific HTTP method."""
         if method not in self.map:
             raise Exception("No such method: %s" % method)
 
-        def decorate(f):
-            self.map[method].add(pattern, _wrap_endpoint(f), **kw)
-            return f
+        def decorate(function):
+            """Add this function to the method map."""
+            self.map[method].add(pattern, _wrap_endpoint(function), **kwargs)
+            return function
         return decorate
 
     def _log_response(self, env, resp):
@@ -143,6 +144,8 @@ class App(decoroute.App):
 
 
 class HTTPExceptionMixin(object):
+
+    """Convenience for HTTP exceptions."""
 
     def json_response(self):
         """Return a Response object from this Exception."""
