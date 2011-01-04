@@ -1,3 +1,12 @@
+dream (1.0.6) lucid; urgency=low
+
+  [ Ian Eure ]
+  * Fix shell examples.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Tue, 04 Jan 2011 17:49:11 +0000
+
 dream (1.0.5) lucid; urgency=low
 
   [ Ian Eure ]
