@@ -10,6 +10,8 @@ Build-Depends: cdbs,
  python-setuptools,
  python-nose,
  python-coverage,
+ python-decoroute,
+ python-webob
 Standards-Version: 3.8.3
 Homepage: http://github.com/simplegeo/dream
 
