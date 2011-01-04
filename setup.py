@@ -8,9 +8,9 @@ from setuptools import setup, find_packages
 
 
 setup(name="dream",
-      version=0,
+      version="1.0.0",
+      packages=find_packages(),
       install_requires=['webob',
                         'decoroute'],
-      tests_require=['nose',
-                     'mock'],
-      test_suite="nose.collector",)
+      tests_require=['nose'],
+      test_suite="nose.collector")
