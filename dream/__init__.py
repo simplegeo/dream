@@ -120,7 +120,8 @@ class App(decoroute.App):
             resp = resp.json_response()
 
         if isinstance(resp, Exception):
-            resp = exc.HTTPInternalServerError.from_exception(resp).json_response()
+            resp = exc.HTTPInternalServerError.from_exception(
+                resp).json_response()
 
         if not isinstance(resp, Response):
             resp = exc.HTTPInternalServerError(

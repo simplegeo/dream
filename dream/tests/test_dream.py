@@ -21,6 +21,7 @@ class WrapEndpointTest(unittest.TestCase):
     def test_generates_request(self):
         """Make sure request objects are generated."""
         runs = []
+
         def test_f(request):
             runs.append(True)
             self.assert_(isinstance(request, Request))
@@ -32,8 +33,8 @@ class WrapEndpointTest(unittest.TestCase):
 
     def test_http_exceptions_returned(self):
         """Make sure HTTPExceptions are returned."""
-
         ex = exc.HTTPException(000, "Test exception")
+
         def test_f(request):
             raise ex
 
@@ -43,8 +44,8 @@ class WrapEndpointTest(unittest.TestCase):
 
     def test_exceptions_returned(self):
         """Make sure non-HTTPExceptions are returned."""
-
         ex = Exception("Test exception")
+
         def test_f(request):
             raise ex
 
@@ -176,7 +177,6 @@ class RenderTest(unittest.TestCase):
         resp = self.app._render({}, "foo")
         self.assertTrue(isinstance(resp, tuple))
         self.assertTrue(resp[0].startswith("500"))
-
 
 
 class GetEndpointsTest(unittest.TestCase):
