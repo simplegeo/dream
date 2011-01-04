@@ -1,3 +1,12 @@
+dream (1.0.4) lucid; urgency=low
+
+  [ Ian Eure ]
+  * Update .gitignore
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Tue, 04 Jan 2011 01:28:34 +0000
+
 dream (1.0.0) foss-development; urgency=low
 
   * Initial Release.
