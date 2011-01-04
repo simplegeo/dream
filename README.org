@@ -64,9 +64,12 @@
                             headers={'Content-Type': 'text/plain'})
 #+END_SRC
 
+  Run it:
+#+BEGIN_SRC
   $ gunicorn my_app:App &
   $ curl -i http://localhost:8080/greeting.json
   $ curl -i http://localhost:8080/greeting.txt
+#+END_SRC
 
 
 * Endpoint introspection
