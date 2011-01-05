@@ -1,3 +1,12 @@
+dream (1.0.8) lucid; urgency=low
+
+  [ Ian Eure ]
+  * Force requests to be utf-8.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Wed, 05 Jan 2011 20:08:04 +0000
+
 dream (1.0.7) lucid; urgency=low
 
   * UNRELEASED
