@@ -51,7 +51,7 @@ def _wrap_endpoint(function):
     @wraps(function)
     def wrapper(env, *args, **kwargs):
         try:
-            return function(Request(env), *args, **kwargs)
+            return function(Request(env, charset='utf-8'), *args, **kwargs)
         except Exception, ex:
             return ex
 
