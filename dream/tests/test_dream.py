@@ -9,6 +9,7 @@
 import unittest
 import json
 
+from webob.multidict import UnicodeMultiDict
 from dream import (App, Request, Response, JSONResponse,
                    HumanReadableJSONResponse, exc,
                    endpoints, _wrap_endpoint)
@@ -73,6 +74,14 @@ class WrapEndpointTest(unittest.TestCase):
         endpoint_prime = _wrap_endpoint(lambda req: "test")
         resp = endpoint_prime({'REQUEST_METHOD': 'GET'})
         self.assertEquals(resp, "test")
+
+    def test_unicode_request(self):
+        """Make sure the request uses Unicode."""
+        env = {'QUERY_STRING': 'q=ü'}
+        def __endpoint__(request):
+            self.assertTrue(isinstance(request.GET, webob.UnicodeMultiDict))
+
+        _wrap_endpoint(__endpoint__)(env)
 
 
 class JSONResponseTest(unittest.TestCase):
