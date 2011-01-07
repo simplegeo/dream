@@ -171,7 +171,9 @@ def _exception_to_response(exception, cookie=None):
     the general public to consume.
     """
     return JSONResponse(
-        body={'detail': "An internal error occured. "
+        body={'detail': str(exception)
+              if isinstance(exception, exc.HTTPException) else
+              "An internal error occured. "
               "If it makes you feel better, have a cookie.",
               'cookie': cookie},
         status=getattr(exception, 'status', 500))

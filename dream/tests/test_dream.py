@@ -263,8 +263,20 @@ class ExceptionToResponseTest(unittest.TestCase):
         resp = _exception_to_response(Exception("foo"), "cookie")
         self.assertFalse('traceback' in json.loads(resp.body))
 
+    def test_httpexception_message(self):
+        """Make sure the message from a HTTPException is preserved."""
+        msg = "foo"
+        resp = _exception_to_response(exc.HTTPBadRequest(msg), "cookie")
+        self.assertEqual(json.loads(resp.body)['detail'], msg)
 
-class ExceptionToResponseTest(unittest.TestCase):
+    def test_exception_message(self):
+        """Make sure the message from a non-HTTPException is elided."""
+        msg = "Something went terribly wrong"
+        resp = _exception_to_response(ValueError(msg), "cookie")
+        self.assertNotEqual(json.loads(resp.body)['detail'], msg)
+
+
+class DebugExceptionToResponseTest(unittest.TestCase):
 
     def test_types(self):
         resp = _debug_exception_to_reponse(Exception("foo"))
