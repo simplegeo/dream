@@ -1,3 +1,18 @@
+dream (1.0.9) lucid; urgency=low
+
+  [ Ian Eure ]
+  * Add a test.
+  * Refactor exception handling so we don’t use mixins. Add a debug
+    flag. Improve error handling:  - Generate a unique cookie per error,
+    and include it in the error log.  - Always log the file/line/cookie
+    in the error log.  - Return scrubbed messages to the user.  - With
+    debug enabled, return the error and a traceback.  - Break out the
+    exception handling code to _mangle_response.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Fri, 07 Jan 2011 02:02:04 +0000
+
 dream (1.0.8) lucid; urgency=low
 
   [ Ian Eure ]
