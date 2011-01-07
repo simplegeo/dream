@@ -1,3 +1,12 @@
+dream (1.0.12) lucid; urgency=low
+
+  [ Ian Eure ]
+  * Only report coverage for dream, not for system modules.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Fri, 07 Jan 2011 18:41:04 +0000
+
 dream (1.0.11) lucid; urgency=low
 
   [ Ian Eure ]
