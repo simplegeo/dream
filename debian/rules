@@ -9,5 +9,5 @@ include /usr/share/cdbs/1/class/python-distutils.mk
 install/python-dream::
 	python setup.py nosetests --with-coverage --cover-package=dream \
 	    --with-xunit --xunit-file=$(ARTIFACTS)/xunit.xml
-	python-coverage xml -o $(ARTIFACTS)/coverage.xml
+	python-coverage xml --include="dream*" -o $(ARTIFACTS)/coverage.xml
 
