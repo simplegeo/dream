@@ -12,7 +12,8 @@ import json
 from webob.multidict import UnicodeMultiDict
 from dream import (App, Request, Response, JSONResponse,
                    HumanReadableJSONResponse, exc,
-                   endpoints, _wrap_endpoint)
+                   endpoints, _wrap_endpoint, _exception_to_response,
+                   _debug_exception_to_reponse)
 
 
 class WrapEndpointTest(unittest.TestCase):
@@ -144,22 +145,6 @@ class TestExpose(unittest.TestCase):
         self.assert_(self.app.map[method]._patterns[url][1] is not f)
 
 
-class HTTPExceptionMixinTest(unittest.TestCase):
-
-    def test_has_json_response(self):
-        ex = exc.HTTPBadRequest(detail="test 123",
-                                comment="Hiii")
-        self.assertTrue(hasattr(ex, 'json_response'))
-        resp = ex.json_response()
-        self.assertTrue(isinstance(resp, Response))
-        self.assertEqual(resp.status, ex.status)
-        body = json.loads(resp.body)
-        self.assertTrue('detail' in body)
-        self.assertTrue(body['detail'] == ex.detail)
-        self.assertTrue('comment' in body)
-        self.assertTrue(body['comment'] == ex.comment)
-
-
 class RenderTest(unittest.TestCase):
 
     def setUp(self):
@@ -168,6 +153,7 @@ class RenderTest(unittest.TestCase):
     def test_httpexception(self):
         ex = exc.HTTPNotFound(detail="test")
         out = self.app._render({}, ex)
+        print out
         self.assertTrue(out[0].startswith('404'))
 
     def test_non_httpexception(self):
@@ -245,6 +231,89 @@ class RouteTest(unittest.TestCase):
         resp = app.route({'REQUEST_METHOD': 'GET',
                            'PATH_INFO': '/'})
         self.assertTrue(resp is response)
+
+
+class ExceptionToResponseTest(unittest.TestCase):
+
+    def test_types(self):
+        resp = _exception_to_response(Exception("foo"))
+        self.assertTrue(isinstance(resp, Response))
+
+    def test_status(self):
+        """Make sure webob exception statuses are preserved."""
+        not_found = exc.HTTPNotFound("Sorry")
+        resp = _exception_to_response(not_found)
+        self.assertEqual(not_found.status, resp.status)
+
+    def test_has_detail(self):
+        """Make sure there's error detail."""
+        resp = _exception_to_response(Exception("foo"), "cookie")
+        body = json.loads(resp.body)
+        self.assertTrue('detail' in body)
+
+    def test_has_cookie(self):
+        """Make sure the cookie is included."""
+        resp = _exception_to_response(Exception("foo"), "cookie")
+        body = json.loads(resp.body)
+        self.assertTrue('cookie' in body)
+        self.assertEqual(body['cookie'], 'cookie')
+
+    def test_no_traceback(self):
+        """Make sure there is no traceback."""
+        resp = _exception_to_response(Exception("foo"), "cookie")
+        self.assertFalse('traceback' in json.loads(resp.body))
+
+
+class ExceptionToResponseTest(unittest.TestCase):
+
+    def test_types(self):
+        resp = _debug_exception_to_reponse(Exception("foo"))
+        self.assertTrue(isinstance(resp, Response))
+
+    def test_status(self):
+        """Make sure webob exception statuses are preserved."""
+        not_found = exc.HTTPNotFound("Sorry")
+        resp = _debug_exception_to_reponse(not_found)
+        self.assertEqual(not_found.status, resp.status)
+
+    def test_has_detail(self):
+        """Make sure there's error detail."""
+        resp = _debug_exception_to_reponse(Exception("foo"), "cookie")
+        body = json.loads(resp.body)
+        self.assertTrue('detail' in body)
+
+    def test_has_cookie(self):
+        """Make sure the cookie is included."""
+        resp = _debug_exception_to_reponse(Exception("foo"), "cookie")
+        body = json.loads(resp.body)
+        self.assertTrue('cookie' in body)
+        self.assertEqual(body['cookie'], 'cookie')
+
+    def test_has_traceback(self):
+        """Make sure there is a traceback."""
+        resp = _debug_exception_to_reponse(Exception("foo"), "cookie")
+        self.assertTrue('traceback' in json.loads(resp.body))
+
+
+class DebugTest(unittest.TestCase):
+
+    """Make sure the debug option works."""
+
+    def test_debug_value(self):
+        self.assertTrue(App(debug=True).debug)
+        self.assertFalse(App().debug)
+
+    def test_debug_exceptions(self):
+        """Make sure exceptions are handled properly based on debug."""
+        app = App(debug=True)
+        resp = app._mangle_response(exc.HTTPBadRequest("Whops"))
+        self.assertTrue('traceback' in json.loads(resp.body))
+
+    def test_nondebug_exceptions(self):
+        """Make sure exceptions are handled properly based on debug."""
+        app = App(debug=False)
+        resp = app._mangle_response(exc.HTTPBadRequest("Whops"))
+        self.assertFalse('traceback' in json.loads(resp.body))
 
 
 if __name__ == '__main__':

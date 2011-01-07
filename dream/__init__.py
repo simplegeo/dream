@@ -6,12 +6,14 @@
 
 """Dream, a hyperminimal WSGI framework."""
 
-from functools import wraps
-from itertools import chain
-
 import sys
 import logging
 import json
+from uuid import uuid1
+from functools import wraps
+from itertools import chain
+from traceback import format_exc
+
 
 import decoroute
 from webob import Request, Response, exc
@@ -63,14 +65,16 @@ class App(decoroute.App):
     """API Core dispatcher."""
 
     logs = {}
+    debug = False
 
-    def __init__(self, prefix="", key="dream.app"):
+    def __init__(self, prefix="", key="dream.app", debug=False):
         decoroute.App.__init__(self, prefix, key)
         self.map = dict(
             ((method, decoroute.UrlMap())
              for method in ('HEAD', 'GET', 'POST', 'PUT', 'DELETE')))
         self.not_found(lambda e: exc.HTTPNotFound(detail="Not found"))
         self._render = self._render_response
+        self.debug = debug
         self.logs['access'] = logging.getLogger('dream.access')
         self.logs['error'] = logging.getLogger('dream.error')
 
@@ -111,25 +115,29 @@ class App(decoroute.App):
             resp.status_int, env.get('REQUEST_METHOD', "?GET?"),
             env.get('PATH_INFO', '/???'), env.get('QUERY_STRING', " ?QS?"))
 
+    def _mangle_response(self, resp):
+        """Mangle the response, if warranted."""
+        if not isinstance(resp, Response):
+            resp = Exception("Expected a Response object, got %s instead." %
+                             str(type(resp)))
+
+        if isinstance(resp, Exception):
+            error_cookie = uuid1().hex
+            self.logs['error'].exception(
+                "Cookie %s: " +
+                "; ".join(line.strip()
+                          for line in format_exc().strip().split("\n")[-3:]),
+                error_cookie)
+            func = (_debug_exception_to_reponse if self.debug
+                    else _exception_to_response)
+            resp = func(resp, error_cookie)
+
+        return resp
+
     def _render_response(self, env, resp):
         """Render the Response object into WSGI format."""
 
-        if isinstance(resp, Exception):
-            self.logs['error'].exception(resp)
-
-        if isinstance(resp, exc.HTTPException):
-            resp = resp.json_response()
-
-        if isinstance(resp, Exception):
-            resp = exc.HTTPInternalServerError.from_exception(
-                resp).json_response()
-
-        if not isinstance(resp, Response):
-            resp = exc.HTTPInternalServerError(
-                detail=json.dumps(
-                    {'error': "Expected a Response object, got %s instead." %
-                     str(type(resp))})).json_response()
-
+        resp = self._mangle_response(resp)
         self._log_response(env, resp)
         return (resp.status, resp.headers.items(), resp.app_iter)
 
@@ -143,21 +151,30 @@ class App(decoroute.App):
                 for meth in self.map.iterkeys()))
 
 
-class HTTPExceptionMixin(object):
+def _debug_exception_to_reponse(exception, cookie=None):
+    """Return a JSONResponse representing an uncaught Exception.
 
-    """Convenience for HTTP exceptions."""
+    This includes detailed information for debugging, and should not
+    be used in production to avoid information leaks.
+    """
+    return JSONResponse(status=getattr(exception, 'status', 500),
+                        body={'detail': "Caught exception %s: %s" % (
+                type(exception), str(exception)),
+                              'traceback': format_exc(),
+                              'cookie': cookie})
 
-    def json_response(self):
-        """Return a Response object from this Exception."""
-        return JSONResponse(
-            body={'detail': self.detail, 'comment': self.comment},
-            status=self.status)
 
-    @classmethod
-    def from_exception(cls, ex):
-        """Return a new HTTPException from a non-HTTPException."""
-        return cls(detail="Caught exception %s: %s" % (
-                type(ex), str(ex)))
+def _exception_to_response(exception, cookie=None):
+    """Return a JSONResponse representing an uncaught Exception.
+
+    This doesn't include any debug information, and is suitable for
+    the general public to consume.
+    """
+    return JSONResponse(
+        body={'detail': "An internal error occured. "
+              "If it makes you feel better, have a cookie.",
+              'cookie': cookie},
+        status=getattr(exception, 'status', 500))
 
 
 def endpoints(app, *args, **kwargs):
@@ -167,6 +184,3 @@ def endpoints(app, *args, **kwargs):
     def __endpoints__(request):
         """Returns known endpoints and their docstrings."""
         return HumanReadableJSONResponse(body=app.endpoints())
-
-
-exc.WSGIHTTPException.__bases__ += (HTTPExceptionMixin,)
