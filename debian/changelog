@@ -1,3 +1,12 @@
+dream (1.0.11) lucid; urgency=low
+
+  [ Ian Eure ]
+  * Output coverage to the correct location.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Fri, 07 Jan 2011 18:35:06 +0000
+
 dream (1.0.10) lucid; urgency=low
 
   [ Ian Eure ]
