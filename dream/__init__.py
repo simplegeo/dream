@@ -31,27 +31,32 @@ class JSONResponse(Response):
     """A response in JSON format."""
 
     default_content_type = 'application/json'
+    dumps_args = {}
 
     def __init__(self, **kwargs):
-        kwargs.update(body=json.dumps(kwargs['body']))
-        Response.__init__(self, **kwargs)
+        Response.__init__(self, body=self.json_dumps(kwargs.pop('body')),
+                          **kwargs)
+
+    def json_dumps(self, obj):
+        """Return this object as a JSON string."""
+        return json.dumps(obj, **self.dumps_args)
 
 
-class HumanReadableJSONResponse(Response):
+class HumanReadableJSONResponse(JSONResponse):
 
     """A response in JSON format, with formatting for human readability"""
 
-    default_content_type = 'application/json'
-
     def __init__(self, **kwargs):
-        kwargs.update(body=json.dumps(kwargs['body'], indent=4))
-        Response.__init__(self, **kwargs)
+        self.dumps_args['indent'] = 4
+        JSONResponse.__init__(self, **kwargs)
 
 
 def _wrap_endpoint(function):
     """Wrap an endpoint, creating a Request object from the WSGI env."""
+
     @wraps(function)
     def wrapper(env, *args, **kwargs):
+        """Wrap this endpoint."""
         try:
             return function(Request(env, charset='utf-8'), *args, **kwargs)
         except Exception, ex:
