@@ -31,9 +31,9 @@ class JSONResponse(Response):
     """A response in JSON format."""
 
     default_content_type = 'application/json'
-    dumps_args = {}
 
     def __init__(self, **kwargs):
+        self.dumps_args = {}
         Response.__init__(self, body=self.json_dumps(kwargs.pop('body')),
                           **kwargs)
 
@@ -47,8 +47,8 @@ class HumanReadableJSONResponse(JSONResponse):
     """A response in JSON format, with formatting for human readability"""
 
     def __init__(self, **kwargs):
-        self.dumps_args['indent'] = 4
         JSONResponse.__init__(self, **kwargs)
+        self.dumps_args['indent'] = 4
 
 
 def _wrap_endpoint(function):
