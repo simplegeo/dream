@@ -14,7 +14,6 @@ from functools import wraps
 from itertools import chain
 from traceback import format_exc
 
-
 import decoroute
 from webob import Request, Response, exc
 
@@ -33,22 +32,20 @@ class JSONResponse(Response):
     default_content_type = 'application/json'
 
     def __init__(self, **kwargs):
-        self.dumps_args = {}
-        Response.__init__(self, body=self.json_dumps(kwargs.pop('body')),
+        Response.__init__(self, body=self.serialize(kwargs.pop('body')),
                           **kwargs)
 
-    def json_dumps(self, obj):
+    def serialize(self, obj):
         """Return this object as a JSON string."""
-        return json.dumps(obj, **self.dumps_args)
+        return json.dumps(obj)
 
 
 class HumanReadableJSONResponse(JSONResponse):
 
     """A response in JSON format, with formatting for human readability"""
 
-    def __init__(self, **kwargs):
-        JSONResponse.__init__(self, **kwargs)
-        self.dumps_args['indent'] = 4
+    def serialize(self, obj):
+        return json.dumps(obj, indent=4)
 
 
 def _wrap_endpoint(function):

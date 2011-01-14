@@ -105,23 +105,6 @@ class JSONResponseTest(unittest.TestCase):
         resp = self.resp_class(body=body)
         self.assert_(json.loads(resp.body) == body)
 
-    def test_isolation(self):
-        """Make sure changes are isolated."""
-
-        parent_class = self.resp_class
-        class DummyResponse(parent_class):
-
-            def __init__(self, **kwargs):
-                parent_class.__init__(self, **kwargs)
-                self.dumps_args['foo'] = 'bar'
-
-        dr = DummyResponse(body='hi')
-        self.assertTrue('foo' in dr.dumps_args)
-
-        pr = self.resp_class(body='hi')
-        self.assertFalse('foo' in pr.dumps_args)
-
-
 
 class HumanReadableJSONResponseTest(JSONResponseTest):
 
