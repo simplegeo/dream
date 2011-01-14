@@ -1,3 +1,13 @@
+dream (1.0.15) lucid; urgency=low
+
+  [ Ian Eure ]
+  * Fix a bug with changes to dumps_args in child classes affecting the
+    base JSONResponse.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Fri, 14 Jan 2011 00:06:45 +0000
+
 dream (1.0.13) lucid; urgency=low
 
   [ Ian Eure ]
