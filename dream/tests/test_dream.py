@@ -331,5 +331,21 @@ class DebugTest(unittest.TestCase):
         self.assertFalse('traceback' in json.loads(resp.body))
 
 
+class MangleResponseTest(unittest.TestCase):
+
+    """Make sure _mangle_response works."""
+
+    def setUp(self):
+        self.app = App(debug=True)
+
+    def test_exceptions(self):
+        """Make sure exceptions are handled properly."""
+        exc = ValueError("Expected some cheese.")
+        resp = self.app._mangle_response(exc)
+        body = json.loads(resp.body)
+        self.assertTrue(body['detail'].startswith('Caught exception ' +
+                                                  str(type(exc))))
+
+
 if __name__ == '__main__':
     unittest.main()
