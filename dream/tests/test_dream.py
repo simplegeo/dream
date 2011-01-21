@@ -12,77 +12,8 @@ import json
 from webob.multidict import UnicodeMultiDict
 from dream import (App, Request, Response, JSONResponse,
                    HumanReadableJSONResponse, exc,
-                   endpoints, _wrap_endpoint, _exception_to_response,
+                   endpoints, _exception_to_response,
                    _debug_exception_to_reponse)
-
-
-class WrapEndpointTest(unittest.TestCase):
-
-    """Tests for the _wrap_endpoint function."""
-
-    def test_generates_request(self):
-        """Make sure request objects are generated."""
-        runs = []
-
-        def test_f(request):
-            runs.append(True)
-            self.assert_(isinstance(request, Request))
-            return Response()
-
-        test_f_prime = _wrap_endpoint(test_f)
-        output = test_f_prime({'HTTP_X_SIMPLEGEO_USER': 'jcleese'})
-        self.assert_(len(runs) == 1)
-
-    def test_http_exceptions_returned(self):
-        """Make sure HTTPExceptions are returned."""
-        ex = exc.HTTPException(000, "Test exception")
-
-        def test_f(request):
-            raise ex
-
-        test_f_prime = _wrap_endpoint(test_f)
-        output = test_f_prime({'HTTP_X_SIMPLEGEO_USER': 'jcleese'})
-        self.assert_(output is ex)
-
-    def test_exceptions_returned(self):
-        """Make sure non-HTTPExceptions are returned."""
-        ex = Exception("Test exception")
-
-        def test_f(request):
-            raise ex
-
-        test_f_prime = _wrap_endpoint(test_f)
-        resp = test_f_prime({'HTTP_X_SIMPLEGEO_USER': 'jcleese'})
-        self.assert_(resp is ex)
-
-    def test_preserves_docstring(self):
-        """Make sure the docstring is preserved in the wrapper function."""
-        def endpoint(request):
-            """This a test endpoint with some documentation."""
-            pass
-
-        endpoint_prime = _wrap_endpoint(endpoint)
-        self.assert_(endpoint_prime.__doc__ == endpoint.__doc__)
-
-    def test_bad_request_missing_header(self):
-        """Ensure BadRequest is returned when X-Simplegeo-User is missing"""
-        endpoint_prime = _wrap_endpoint(lambda req: None)
-        resp = endpoint_prime({'REQUEST_METHOD': 'POST'})
-        self.assertTrue(isinstance(resp, exc.HTTPBadRequest))
-
-    def test_bad_request_missing_header(self):
-        """Ensure BadRequest is not returned when user is missing on GETs."""
-        endpoint_prime = _wrap_endpoint(lambda req: "test")
-        resp = endpoint_prime({'REQUEST_METHOD': 'GET'})
-        self.assertEquals(resp, "test")
-
-    def test_unicode_request(self):
-        """Make sure the request uses Unicode."""
-        env = {'QUERY_STRING': 'q=ü'}
-        def __endpoint__(request):
-            self.assertTrue(isinstance(request.GET, webob.UnicodeMultiDict))
-
-        _wrap_endpoint(__endpoint__)(env)
 
 
 class JSONResponseTest(unittest.TestCase):
@@ -137,15 +68,15 @@ class TestExpose(unittest.TestCase):
         self.app.expose(url, method)(f)
         self.assert_(len(self.app.map[method]._patterns) > old_len)
         self.assert_(url in self.app.map[method]._patterns)
-        self.assert_(self.app.map[method]._patterns[url][1] is not f)
+        self.assert_(self.app.map[method]._patterns[url][1] is f)
 
     def test_expose_method_decorates(self):
-        """Make sure functions are decorated when added."""
+        """Make sure functions aren't decorated when added."""
         url, method = ('/shop', 'GET')
         old_len = len(self.app.map[method]._patterns)
         f = lambda request: None
         self.app.expose(url, method)(f)
-        self.assert_(self.app.map[method]._patterns[url][1] is not f)
+        self.assert_(self.app.map[method]._patterns[url][1] is f)
 
 
 class RenderTest(unittest.TestCase):
@@ -234,6 +165,59 @@ class RouteTest(unittest.TestCase):
         resp = app.route({'REQUEST_METHOD': 'GET',
                            'PATH_INFO': '/'})
         self.assertTrue(resp is response)
+
+    def test_generates_request(self):
+        """Make sure request objects are generated."""
+        runs = []
+        app = App()
+
+        @app.expose("/foo")
+        def test_f(request):
+            runs.append(True)
+            self.assert_(isinstance(request, Request))
+            return Response()
+
+        resp = app.route({'REQUEST_METHOD': 'GET',
+                            'PATH_INFO': "/foo"})
+        self.assert_(len(runs) == 1)
+
+    def test_http_exceptions_returned(self):
+        """Make sure HTTPExceptions are returned."""
+        ex = exc.HTTPException(000, "Test exception")
+        app = App()
+
+        @app.expose("/foo")
+        def test_f(request):
+            raise ex
+
+        resp = app.route({'REQUEST_METHOD': 'GET',
+                            'PATH_INFO': "/foo"})
+        self.assert_(resp is ex)
+
+    def test_exceptions_returned(self):
+        """Make sure non-HTTPExceptions are returned."""
+        ex = Exception("Test exception")
+        app = App()
+
+        @app.expose("/foo")
+        def test_f(request):
+            raise ex
+
+        resp = app.route({'REQUEST_METHOD': 'GET',
+                            'PATH_INFO': "/foo"})
+        self.assert_(resp is ex)
+
+    def test_unicode_request(self):
+        """Make sure the request uses Unicode."""
+        env = {'QUERY_STRING': 'q=ü'}
+        app = App()
+
+        @app.expose("/foo")
+        def __endpoint__(request):
+            self.assertTrue(isinstance(request.GET, webob.UnicodeMultiDict))
+
+        app.route({'REQUEST_METHOD': 'GET',
+                   'PATH_INFO': "/foo"})
 
 
 class ExceptionToResponseTest(unittest.TestCase):
@@ -345,6 +329,27 @@ class MangleResponseTest(unittest.TestCase):
         body = json.loads(resp.body)
         self.assertTrue(body['detail'].startswith('Caught exception ' +
                                                   str(type(exc))))
+
+
+class MultipleExposeTest(unittest.TestCase):
+
+    """Test exposing the same function under multiple URLs."""
+
+    def test_multi_expose(self):
+        app = App()
+
+        @app.expose("/foo")
+        @app.expose("/bar")
+        def endpoint(request):
+            return Response(body="Hi.")
+
+        resp = app.route({'REQUEST_METHOD': "GET",
+                          'PATH_INFO': "/foo"})
+        self.assertTrue(isinstance(resp, Response))
+        self.assertFalse(isinstance(resp, exc.HTTPError))
+        self.assertTrue(resp.body == "Hi.")
+
+
 
 
 if __name__ == '__main__':

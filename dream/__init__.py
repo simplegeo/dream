@@ -48,20 +48,6 @@ class HumanReadableJSONResponse(JSONResponse):
         return json.dumps(obj, indent=4)
 
 
-def _wrap_endpoint(function):
-    """Wrap an endpoint, creating a Request object from the WSGI env."""
-
-    @wraps(function)
-    def wrapper(env, *args, **kwargs):
-        """Wrap this endpoint."""
-        try:
-            return function(Request(env, charset='utf-8'), *args, **kwargs)
-        except Exception, ex:
-            return ex
-
-    return wrapper
-
-
 class App(decoroute.App):
 
     """API Core dispatcher."""
@@ -92,19 +78,23 @@ class App(decoroute.App):
 
         try:
             endpoint, kwargs = self.map[env['REQUEST_METHOD']].route(path)
+            return endpoint(Request(env, charset='utf-8'), **kwargs)
+
         except decoroute.NotFound, nfex:
             raise exc.HTTPNotFound(" ".join(nfex.args)), None, \
                 getattr(sys, 'last_traceback', None)
-        return endpoint(env, **kwargs)
 
-    def expose(self, pattern, method="GET", **kwargs):
+        except Exception, ex:
+            return ex
+
+    def expose(self, pattern, method="GET", function=None, **kwargs):
         """Register a URL pattern for a specific HTTP method."""
         if method not in self.map:
             raise Exception("No such method: %s" % method)
 
         def decorate(function):
             """Add this function to the method map."""
-            self.map[method].add(pattern, _wrap_endpoint(function), **kwargs)
+            self.map[method].add(pattern, function, **kwargs)
             return function
         return decorate
 
