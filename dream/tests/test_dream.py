@@ -154,9 +154,9 @@ class RouteTest(unittest.TestCase):
 
     def test_nonprefix_404(self):
         app = App()
-        self.assertRaises(exc.HTTPNotFound, app.route,
-                          {'REQUEST_METHOD': 'GET',
-                           'PATH_INFO': '/foo'})
+        resp = app.route({'REQUEST_METHOD': 'GET',
+                          'PATH_INFO': '/foo'})
+        self.assertTrue(isinstance(resp, exc.HTTPNotFound))
 
     def test_success(self):
         response = Response(body="Hi")
@@ -348,8 +348,6 @@ class MultipleExposeTest(unittest.TestCase):
         self.assertTrue(isinstance(resp, Response))
         self.assertFalse(isinstance(resp, exc.HTTPError))
         self.assertTrue(resp.body == "Hi.")
-
-
 
 
 if __name__ == '__main__':

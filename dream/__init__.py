@@ -81,8 +81,7 @@ class App(decoroute.App):
             return endpoint(Request(env, charset='utf-8'), **kwargs)
 
         except decoroute.NotFound, nfex:
-            raise exc.HTTPNotFound(" ".join(nfex.args)), None, \
-                getattr(sys, 'last_traceback', None)
+            return exc.HTTPNotFound(" ".join(nfex.args))
 
         except Exception, ex:
             return ex
@@ -96,7 +95,8 @@ class App(decoroute.App):
             """Add this function to the method map."""
             self.map[method].add(pattern, function, **kwargs)
             return function
-        return decorate
+
+        return decorate(function) if function else decorate
 
     def _log_response(self, env, resp):
         """Log this response in the access log."""
