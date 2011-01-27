@@ -1,3 +1,16 @@
+dream (1.0.18) lucid; urgency=low
+
+  [ Ian Eure ]
+  * Remove _wrap_endpoint(), move this logic into render(), update
+    tests.
+  * Added Makefile.
+  * Return HTTPNotFound from route(), otherwise unregistered URLs raise
+    a 500.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Thu, 27 Jan 2011 18:46:35 +0000
+
 dream (1.0.17) lucid; urgency=low
 
   [ Ian Eure ]
