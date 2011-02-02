@@ -8,7 +8,7 @@ from setuptools import setup, find_packages
 
 
 setup(name="dream",
-      version="1.0.19",
+      version="1.0.20",
       packages=find_packages(),
       install_requires=['webob',
                         'decoroute'],
