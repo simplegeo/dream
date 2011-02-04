@@ -6,14 +6,16 @@
 
 """Tests for Dream."""
 
+import sys
 import unittest
+import traceback
 import json
 
 from webob.multidict import UnicodeMultiDict
 from dream import (App, Request, Response, JSONResponse,
                    HumanReadableJSONResponse, exc,
                    endpoints, _exception_to_response,
-                   _debug_exception_to_reponse)
+                   _debug_exception_to_reponse, _format_traceback)
 
 
 class JSONResponseTest(unittest.TestCase):
@@ -87,7 +89,6 @@ class RenderTest(unittest.TestCase):
     def test_httpexception(self):
         ex = exc.HTTPNotFound(detail="test")
         out = self.app._render({}, ex)
-        print out
         self.assertTrue(out[0].startswith('404'))
 
     def test_non_httpexception(self):
@@ -288,10 +289,24 @@ class DebugExceptionToResponseTest(unittest.TestCase):
         self.assertTrue('cookie' in body)
         self.assertEqual(body['cookie'], 'cookie')
 
-    def test_has_traceback(self):
-        """Make sure there is a traceback."""
+    def test_traceback_object(self):
+        """Make sure tracebacks are included when they're objects."""
+        try:
+            raise Exception("foo")
+        except Exception, ex:
+            ex.__traceback__ = sys.exc_info()[-1]
+
+        resp = _debug_exception_to_reponse(ex, "cookie")
+        body = json.loads(resp.body)
+        self.assertTrue('traceback' in body)
+        self.assertNotEqual(body['traceback'], "No traceback available.")
+
+    def test_no_traceback(self):
+        """Make sure lack of tracebacks doesn't break Dream."""
         resp = _debug_exception_to_reponse(Exception("foo"), "cookie")
-        self.assertTrue('traceback' in json.loads(resp.body))
+        body = json.loads(resp.body)
+        self.assertTrue('traceback' in body)
+        self.assertEqual(body['traceback'], ["No traceback available"])
 
 
 class DebugTest(unittest.TestCase):
@@ -330,6 +345,16 @@ class MangleResponseTest(unittest.TestCase):
         self.assertTrue(body['detail'].startswith('Caught exception ' +
                                                   str(type(exc))))
 
+    def test_traceback_list(self):
+        """Make sure tracebacks are included when they're lists."""
+        ex = Exception("foo")
+        ex.__traceback__ = traceback.extract_stack()
+
+        resp = _debug_exception_to_reponse(ex, "cookie")
+        body = json.loads(resp.body)
+        self.assertTrue('traceback' in body)
+        self.assertNotEqual(body['traceback'], ["No traceback available."])
+
 
 class MultipleExposeTest(unittest.TestCase):
 
@@ -348,6 +373,37 @@ class MultipleExposeTest(unittest.TestCase):
         self.assertTrue(isinstance(resp, Response))
         self.assertFalse(isinstance(resp, exc.HTTPError))
         self.assertTrue(resp.body == "Hi.")
+
+
+class FormatTracebackTest(unittest.TestCase):
+
+    """Test _format_traceback."""
+
+    def test_no_traceback(self):
+        tbk = _format_traceback(Exception())
+        self.assertTrue(isinstance(tbk, (list, tuple)))
+        self.assertTrue(len(tbk) == 1)
+        self.assertTrue(tbk == ["No traceback available"])
+
+    def test_traceback_object(self):
+        try:
+            raise Exception("Boo")
+        except Exception, ex:
+            ex.__traceback__ = sys.exc_info()[-1]
+
+        tbk = _format_traceback(ex)
+        self.assertTrue(isinstance(tbk, (list, tuple)))
+        self.assertTrue(len(tbk) > 0)
+        self.assertTrue('test_traceback_object' in tbk[-1])
+
+    def test_traceback_list(self):
+        ex = Exception("Boo")
+        ex.__traceback__ = traceback.extract_stack()
+
+        tbk = _format_traceback(ex)
+        self.assertTrue(isinstance(tbk, (list, tuple)))
+        self.assertTrue(len(tbk) > 0)
+        self.assertTrue('test_traceback_list' in tbk[-1])
 
 
 if __name__ == '__main__':

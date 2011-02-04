@@ -12,7 +12,7 @@ import json
 from uuid import uuid1
 from functools import wraps
 from itertools import chain
-from traceback import format_exc
+from traceback import format_list, extract_stack, extract_tb
 
 import decoroute
 from webob import Request, Response, exc
@@ -81,9 +81,14 @@ class App(decoroute.App):
             return endpoint(Request(env, charset='utf-8'), **kwargs)
 
         except decoroute.NotFound, nfex:
-            return exc.HTTPNotFound(" ".join(nfex.args))
+            new_ex = exc.HTTPNotFound(" ".join(nfex.args))
+            if not hasattr(new_ex, '__traceback__'):
+                new_ex.__traceback__ = sys.exc_info()[-1]
+            return new_ex
 
         except Exception, ex:
+            if not hasattr(ex, '__traceback__'):
+                ex.__traceback__ = sys.exc_info()[-1]
             return ex
 
     def expose(self, pattern, method="GET", function=None, **kwargs):
@@ -112,14 +117,14 @@ class App(decoroute.App):
         if not isinstance(resp, Response) and not isinstance(resp, Exception):
             resp = Exception("Expected a Response object, got %s instead." %
                              str(type(resp)))
+            resp.__traceback__ = extract_stack()
 
         if isinstance(resp, Exception):
             error_cookie = uuid1().hex
+
             self.logs['error'].exception(
-                "Cookie %s: " +
-                "; ".join(line.strip()
-                          for line in format_exc().strip().split("\n")[-3:]),
-                error_cookie)
+                "Cookie %s: %s",
+                error_cookie, ';'.join(_format_traceback(resp)))
             func = (_debug_exception_to_reponse if self.debug
                     else _exception_to_response)
             resp = func(resp, error_cookie)
@@ -143,17 +148,29 @@ class App(decoroute.App):
                 for meth in self.map.iterkeys()))
 
 
+def _format_traceback(exc_):
+    """Return a formatted traceback as a list."""
+    if not hasattr(exc_, '__traceback__'):
+        return ["No traceback available"]
+
+    return tuple(frame.strip().replace("\n", ':')
+                 for frame in format_list(
+            exc_.__traceback__ if isinstance(exc_.__traceback__, list) else
+            extract_tb(exc_.__traceback__)))
+
+
 def _debug_exception_to_reponse(exception, cookie=None):
     """Return a JSONResponse representing an uncaught Exception.
 
     This includes detailed information for debugging, and should not
     be used in production to avoid information leaks.
     """
-    return JSONResponse(status=getattr(exception, 'status', 500),
-                        body={'detail': "Caught exception %s: %s" % (
+    return JSONResponse(
+        status=getattr(exception, 'status', 500),
+        body={'detail': "Caught exception %s: %s" % (
                 type(exception), str(exception)),
-                              'traceback': format_exc(),
-                              'cookie': cookie})
+              'traceback': _format_traceback(exception),
+              'cookie': cookie})
 
 
 def _exception_to_response(exception, cookie=None):
