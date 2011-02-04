@@ -142,6 +142,14 @@ class EndpointsTest(unittest.TestCase):
                                 'PATH_INFO': '/endpoints'}),
                 HumanReadableJSONResponse))
 
+    def test_has_prefix(self):
+        """Make sure endpoint URLs include the prefix."""
+        prefix = "/foo"
+        app = App(prefix=prefix)
+        endpoints(app, "/endpoints")
+        for endpoint in app.endpoints().iterkeys():
+            self.assertTrue(prefix in endpoint)
+
 
 class RouteTest(unittest.TestCase):
 

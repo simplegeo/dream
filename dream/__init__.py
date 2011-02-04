@@ -142,7 +142,8 @@ class App(decoroute.App):
         """Return a dict of registered endpoints."""
         return dict(
             chain.from_iterable(
-                (('%s %s' % (meth, pattern), func.__doc__ or "Undocumented.")
+                (('%s %s%s' % (meth, self._prefix[0], pattern),
+                  func.__doc__ or "Undocumented.")
                  for ((func, _), pattern) in
                  self.map[meth]._endpoints.iteritems())
                 for meth in self.map.iterkeys()))
