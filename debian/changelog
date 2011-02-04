@@ -1,3 +1,14 @@
+dream (1.0.21) lucid; urgency=low
+
+  [ Ian Eure ]
+  * Fix handling of tracebacks in logs & responses when there is an
+    error. Once we exit the frame the exception was caught in, we can’t
+    access the traceback, so assign it up front.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Fri, 04 Feb 2011 18:05:56 +0000
+
 dream (1.0.20) lucid; urgency=low
 
   * UNRELEASED
