@@ -14,7 +14,7 @@ import json
 from webob.multidict import UnicodeMultiDict
 from dream import (App, Request, Response, JSONResponse,
                    HumanReadableJSONResponse, exc,
-                   endpoints, _exception_to_response,
+                   endpoints, hidden, _exception_to_response,
                    _debug_exception_to_reponse, _format_traceback)
 
 
@@ -412,6 +412,31 @@ class FormatTracebackTest(unittest.TestCase):
         self.assertTrue(isinstance(tbk, (list, tuple)))
         self.assertTrue(len(tbk) > 0)
         self.assertTrue('test_traceback_list' in tbk[-1])
+
+
+class TestHidden(unittest.TestCase):
+
+    """Test the @hidden decorator."""
+
+    def test_decorator(self):
+        """Test the decorator itself."""
+
+        func = lambda: None
+        func_ = hidden(func)
+        self.assertTrue(func is func_)
+        self.assertTrue(hasattr(func_, '__hidden__'))
+        self.assertTrue(func.__hidden__)
+
+    def test_endpoints(self):
+        """Make sure hidden functions don't show up in endpoints."""
+        app = App()
+
+        @app.expose('/endpoint')
+        @hidden
+        def endpoint(request):
+            return Response()
+
+        self.assertFalse(app.endpoints())
 
 
 if __name__ == '__main__':

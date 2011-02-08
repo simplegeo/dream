@@ -145,7 +145,8 @@ class App(decoroute.App):
                 (('%s %s%s' % (meth, self._prefix[0], pattern),
                   func.__doc__ or "Undocumented.")
                  for ((func, _), pattern) in
-                 self.map[meth]._endpoints.iteritems())
+                 self.map[meth]._endpoints.iteritems()
+                 if not getattr(func, '__hidden__', False))
                 for meth in self.map.iterkeys()))
 
 
@@ -196,3 +197,10 @@ def endpoints(app, *args, **kwargs):
     def __endpoints__(request):
         """Returns known endpoints and their docstrings."""
         return HumanReadableJSONResponse(body=app.endpoints())
+
+
+def hidden(function):
+    """Mark an endpoint hidden."""
+
+    function.__hidden__ = True
+    return function
