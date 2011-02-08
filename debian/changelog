@@ -1,3 +1,12 @@
+dream (1.0.23) lucid; urgency=low
+
+  [ Ian Eure ]
+  * Add support for hidden endpoints.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Tue, 08 Feb 2011 20:46:56 +0000
+
 dream (1.0.22) lucid; urgency=low
 
   [ Ian Eure ]
