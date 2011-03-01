@@ -1,3 +1,13 @@
+dream (1.0.25) lucid; urgency=low
+
+  [ Ian Eure ]
+  * Correctly return detailed HTTP exception information for older
+    versions of webob.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Tue, 01 Mar 2011 19:24:01 +0000
+
 dream (1.0.24) lucid; urgency=low
 
   * UNRELEASED
