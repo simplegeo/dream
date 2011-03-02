@@ -112,6 +112,15 @@ class App(decoroute.App):
             resp.status_int, env.get('REQUEST_METHOD', "?GET?"),
             env.get('PATH_INFO', '/???'), env.get('QUERY_STRING', " ?QS?"))
 
+    def format_traceback(self, resp):
+        """Return a formatted traceback, suitable for logging.
+
+        If you prefer multi-line style, you can override this with:
+        return "\n".join(_format_traceback(resp))
+        """
+        return ';'.join(line.strip().replace("\n", ':') for line in
+                        _format_traceback(resp))
+
     def _mangle_response(self, resp):
         """Mangle the response, if warranted."""
         if not isinstance(resp, Response) and not isinstance(resp, Exception):
@@ -123,8 +132,8 @@ class App(decoroute.App):
             error_cookie = uuid1().hex
 
             self.logs['error'].exception(
-                "Cookie %s: %s",
-                error_cookie, ';'.join(_format_traceback(resp)))
+                "Cookie %s: %s %s", error_cookie, repr(resp),
+                self.format_traceback(resp))
             func = (_debug_exception_to_reponse if self.debug
                     else _exception_to_response)
             resp = func(resp, error_cookie)
@@ -155,10 +164,9 @@ def _format_traceback(exc_):
     if not hasattr(exc_, '__traceback__'):
         return ["No traceback available"]
 
-    return tuple(frame.strip().replace("\n", ':')
-                 for frame in format_list(
-            exc_.__traceback__ if isinstance(exc_.__traceback__, list) else
-            extract_tb(exc_.__traceback__)))
+    return format_list(
+        exc_.__traceback__ if isinstance(exc_.__traceback__, list) else
+        extract_tb(exc_.__traceback__))
 
 
 def _debug_exception_to_reponse(exception, cookie=None):
