@@ -1,3 +1,13 @@
+dream (1.0.27) lucid; urgency=low
+
+  [ Ian Eure ]
+  * Handle error/non-error exceptions differently, i.e. don’t generate a
+    traceback when a redirect exception is thrown.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Wed, 09 Mar 2011 02:14:01 +0000
+
 dream (1.0.26) lucid; urgency=low
 
   [ Ian Eure ]
