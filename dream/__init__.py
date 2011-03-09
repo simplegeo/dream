@@ -123,7 +123,11 @@ class App(decoroute.App):
 
     def _mangle_response(self, resp):
         """Mangle the response, if warranted."""
-        if not isinstance(resp, Response) and not isinstance(resp, Exception):
+        if (isinstance(resp, Response) and
+            not isinstance(resp, exc.HTTPInternalServerError)):
+            return resp
+
+        if not isinstance(resp, Exception):
             resp = Exception("Expected a Response object, got %s instead." %
                              str(type(resp)))
             resp.__traceback__ = extract_stack()
