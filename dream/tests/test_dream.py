@@ -328,13 +328,13 @@ class DebugTest(unittest.TestCase):
     def test_debug_exceptions(self):
         """Make sure exceptions are handled properly based on debug."""
         app = App(debug=True)
-        resp = app._mangle_response(exc.HTTPBadRequest("Whops"))
+        resp = app._mangle_response(exc.HTTPInternalServerError("Whops"))
         self.assertTrue('traceback' in json.loads(resp.body))
 
     def test_nondebug_exceptions(self):
         """Make sure exceptions are handled properly based on debug."""
         app = App(debug=False)
-        resp = app._mangle_response(exc.HTTPBadRequest("Whops"))
+        resp = app._mangle_response(exc.HTTPInternalServerError("Whops"))
         self.assertFalse('traceback' in json.loads(resp.body))
 
 
@@ -362,6 +362,16 @@ class MangleResponseTest(unittest.TestCase):
         body = json.loads(resp.body)
         self.assertTrue('traceback' in body)
         self.assertNotEqual(body['traceback'], ["No traceback available."])
+
+    def test_nonerror_exceptions(self):
+        """Non-error exceptions shouldn't get mangled a traceback."""
+        ex = exc.HTTPMovedPermanently(headers={'Location': "/foo.json"})
+        self.assertTrue(self.app._mangle_response(ex) is ex)
+
+    def test_error_exceptions(self):
+        """Non-error exceptions shouldn't get mangled a traceback."""
+        ex = exc.HTTPInternalServerError()
+        self.assertTrue(self.app._mangle_response(ex) is not ex)
 
 
 class MultipleExposeTest(unittest.TestCase):
