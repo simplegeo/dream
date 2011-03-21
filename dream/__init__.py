@@ -135,7 +135,7 @@ class App(decoroute.App):
         if isinstance(resp, Exception):
             error_cookie = uuid1().hex
 
-            self.logs['error'].exception(
+            self.logs['error'].error(
                 "Cookie %s: %s %s", error_cookie, repr(resp),
                 self.format_traceback(resp))
             func = (_debug_exception_to_reponse if self.debug
