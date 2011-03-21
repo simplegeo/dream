@@ -1,3 +1,13 @@
+dream (1.0.28) lucid; urgency=low
+
+  [ Ian Eure ]
+  * Log at the error level, since logging.exception only works when
+    _handling_ the exception.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Mon, 21 Mar 2011 20:34:01 +0000
+
 dream (1.0.27) lucid; urgency=low
 
   [ Ian Eure ]
