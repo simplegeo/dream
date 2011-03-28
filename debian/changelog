@@ -1,3 +1,12 @@
+dream (1.0.29) lucid; urgency=low
+
+  [ Ian Eure ]
+  * Use wsgi.errors envivonment for the default error_log destination.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Mon, 28 Mar 2011 23:51:02 +0000
+
 dream (1.0.28) lucid; urgency=low
 
   [ Ian Eure ]
