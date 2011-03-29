@@ -6,6 +6,7 @@
 
 """Dream, a hyperminimal WSGI framework."""
 
+import os
 import sys
 import logging
 import json
@@ -138,18 +139,29 @@ class App(decoroute.App):
         error_cookie = uuid1().hex
         return (func(resp, error_cookie), error_cookie)
 
-    def _render_response(self, env, resp):
+    def _get_error_logger(self, env):
+        """Return an error logger for this request."""
+        if env.get('wsgi.multiprocess', False):
+             name = 'dream.error.%d' % os.getpid()
+        elif env.get('wsgi.multithread', False):
+            name = 'dream.error.%s' % threading.currentThread().getName()
+        else:
+            name = 'dream.error'
+
+        log = logging.getLogger(name)
+        if not log.handlers:
+            log.addHandler(logging.StreamHandler(env.get('wsgi.errors',
+                                                         sys.stderr)))
+        return log
+
+    def _render_response(self, env, in_resp):
         """Render the Response object into WSGI format."""
 
-        (resp, cookie) = self._mangle_response(resp)
+        (resp, cookie) = self._mangle_response(in_resp)
         if cookie:
-            log = logging.getLogger('dream.error.%s' %
-                                    threading.currentThread().getName())
-            if not log.handlers:
-                log.addHandler(logging.StreamHandler(env.get('wsgi.errors',
-                                                             sys.stderr)))
-            log.error("Cookie %s: %s %s", cookie, repr(resp),
-                      self.format_traceback(resp))
+            self._get_error_logger(env).error(
+                "Cookie %s: %s %s", cookie, repr(in_resp),
+                self.format_traceback(in_resp))
 
         self._log_response(env, resp)
         return (resp.status, resp.headers.items(), resp.app_iter)
