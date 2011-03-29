@@ -9,6 +9,7 @@
 import sys
 import logging
 import json
+import threading
 from uuid import uuid1
 from functools import wraps
 from itertools import chain
@@ -125,29 +126,31 @@ class App(decoroute.App):
         """Mangle the response, if warranted."""
         if (isinstance(resp, Response) and
             not isinstance(resp, exc.HTTPInternalServerError)):
-            return resp
+            return (resp, None)
 
         if not isinstance(resp, Exception):
             resp = Exception("Expected a Response object, got %s instead." %
                              str(type(resp)))
             resp.__traceback__ = extract_stack()
 
-        if isinstance(resp, Exception):
-            error_cookie = uuid1().hex
-
-            self.logs['error'].error(
-                "Cookie %s: %s %s", error_cookie, repr(resp),
-                self.format_traceback(resp))
-            func = (_debug_exception_to_reponse if self.debug
-                    else _exception_to_response)
-            resp = func(resp, error_cookie)
-
-        return resp
+        func = (_debug_exception_to_reponse if self.debug
+                else _exception_to_response)
+        error_cookie = uuid1().hex
+        return (func(resp, error_cookie), error_cookie)
 
     def _render_response(self, env, resp):
         """Render the Response object into WSGI format."""
 
-        resp = self._mangle_response(resp)
+        (resp, cookie) = self._mangle_response(resp)
+        if cookie:
+            log = logging.getLogger('dream.error.%s' %
+                                    threading.currentThread().getName())
+            if not log.handlers:
+                log.addHandler(logging.StreamHandler(env.get('wsgi.errors',
+                                                             sys.stderr)))
+            log.error("Cookie %s: %s %s", cookie, repr(resp),
+                      self.format_traceback(resp))
+
         self._log_response(env, resp)
         return (resp.status, resp.headers.items(), resp.app_iter)
 
