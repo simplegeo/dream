@@ -6,7 +6,6 @@
 
 """Dream, a hyperminimal WSGI framework."""
 
-import os
 import sys
 import logging
 import json
@@ -65,14 +64,7 @@ class App(decoroute.App):
         self._render = self._render_response
         self.debug = debug
         self.logs['access'] = logging.getLogger('dream.access')
-        self.logs['error'] = self._init_error_log()
-
-    def _init_error_log(self):
-        """Initialize and return the error log."""
-        error_log = logging.getLogger('dream.error')
-        error_log.addHandler(logging.StreamHandler(
-                os.environ.get('wsgi.errors', sys.stderr)))
-        return error_log
+        self.logs['error'] = logging.getLogger('dream.error')
 
     def route(self, env):
         """Route a request.
