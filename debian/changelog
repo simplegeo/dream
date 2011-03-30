@@ -1,3 +1,18 @@
+dream (1.0.30) lucid; urgency=low
+
+  [ Ian Eure ]
+  * Revert "Use wsgi.errors envivonment for the default error_log
+    destination." This reverts commit
+    92bf86e19c0daf1299575083205bf9ae1f1b566d.
+  * Dynamically create an error_log handler which logs to wsgi.errors
+    for the current thread when dealing with an error.
+  * Fix traceback logging. Get appropriate loggers when running
+    threaded, multiprocess, or single-process.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Wed, 30 Mar 2011 19:24:03 +0000
+
 dream (1.0.29) lucid; urgency=low
 
   [ Ian Eure ]
