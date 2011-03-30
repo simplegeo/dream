@@ -10,6 +10,7 @@ import os
 import sys
 import logging
 import json
+import threading
 from uuid import uuid1
 from functools import wraps
 from itertools import chain
@@ -65,14 +66,7 @@ class App(decoroute.App):
         self._render = self._render_response
         self.debug = debug
         self.logs['access'] = logging.getLogger('dream.access')
-        self.logs['error'] = self._init_error_log()
-
-    def _init_error_log(self):
-        """Initialize and return the error log."""
-        error_log = logging.getLogger('dream.error')
-        error_log.addHandler(logging.StreamHandler(
-                os.environ.get('wsgi.errors', sys.stderr)))
-        return error_log
+        self.logs['error'] = logging.getLogger('dream.error')
 
     def route(self, env):
         """Route a request.
@@ -133,29 +127,42 @@ class App(decoroute.App):
         """Mangle the response, if warranted."""
         if (isinstance(resp, Response) and
             not isinstance(resp, exc.HTTPInternalServerError)):
-            return resp
+            return (resp, None)
 
         if not isinstance(resp, Exception):
             resp = Exception("Expected a Response object, got %s instead." %
                              str(type(resp)))
             resp.__traceback__ = extract_stack()
 
-        if isinstance(resp, Exception):
-            error_cookie = uuid1().hex
+        func = (_debug_exception_to_reponse if self.debug
+                else _exception_to_response)
+        error_cookie = uuid1().hex
+        return (func(resp, error_cookie), error_cookie)
 
-            self.logs['error'].error(
-                "Cookie %s: %s %s", error_cookie, repr(resp),
-                self.format_traceback(resp))
-            func = (_debug_exception_to_reponse if self.debug
-                    else _exception_to_response)
-            resp = func(resp, error_cookie)
+    def _get_error_logger(self, env):
+        """Return an error logger for this request."""
+        if env.get('wsgi.multiprocess', False):
+             name = 'dream.error.%d' % os.getpid()
+        elif env.get('wsgi.multithread', False):
+            name = 'dream.error.%s' % threading.currentThread().getName()
+        else:
+            name = 'dream.error'
 
-        return resp
+        log = logging.getLogger(name)
+        if not log.handlers:
+            log.addHandler(logging.StreamHandler(env.get('wsgi.errors',
+                                                         sys.stderr)))
+        return log
 
-    def _render_response(self, env, resp):
+    def _render_response(self, env, in_resp):
         """Render the Response object into WSGI format."""
 
-        resp = self._mangle_response(resp)
+        (resp, cookie) = self._mangle_response(in_resp)
+        if cookie:
+            self._get_error_logger(env).error(
+                "Cookie %s: %s %s", cookie, repr(in_resp),
+                self.format_traceback(in_resp))
+
         self._log_response(env, resp)
         return (resp.status, resp.headers.items(), resp.app_iter)
 

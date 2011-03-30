@@ -328,14 +328,18 @@ class DebugTest(unittest.TestCase):
     def test_debug_exceptions(self):
         """Make sure exceptions are handled properly based on debug."""
         app = App(debug=True)
-        resp = app._mangle_response(exc.HTTPInternalServerError("Whops"))
+        (resp, cookie) = app._mangle_response(
+            exc.HTTPInternalServerError("Whops"))
         self.assertTrue('traceback' in json.loads(resp.body))
+        self.assertTrue(cookie)
 
     def test_nondebug_exceptions(self):
         """Make sure exceptions are handled properly based on debug."""
         app = App(debug=False)
-        resp = app._mangle_response(exc.HTTPInternalServerError("Whops"))
+        (resp, cookie) = app._mangle_response(
+            exc.HTTPInternalServerError("Whops"))
         self.assertFalse('traceback' in json.loads(resp.body))
+        self.assertTrue(cookie)
 
 
 class MangleResponseTest(unittest.TestCase):
@@ -348,7 +352,8 @@ class MangleResponseTest(unittest.TestCase):
     def test_exceptions(self):
         """Make sure exceptions are handled properly."""
         exc = ValueError("Expected some cheese.")
-        resp = self.app._mangle_response(exc)
+        (resp, cookie) = self.app._mangle_response(exc)
+        self.assertTrue(cookie)
         body = json.loads(resp.body)
         self.assertTrue(body['detail'].startswith('Caught exception ' +
                                                   str(type(exc))))
@@ -366,7 +371,9 @@ class MangleResponseTest(unittest.TestCase):
     def test_nonerror_exceptions(self):
         """Non-error exceptions shouldn't get mangled a traceback."""
         ex = exc.HTTPMovedPermanently(headers={'Location': "/foo.json"})
-        self.assertTrue(self.app._mangle_response(ex) is ex)
+        (resp, cookie) = self.app._mangle_response(ex)
+        self.assertFalse(cookie)
+        self.assertTrue(resp is ex)
 
     def test_error_exceptions(self):
         """Non-error exceptions shouldn't get mangled a traceback."""
