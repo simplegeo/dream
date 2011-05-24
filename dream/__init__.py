@@ -125,8 +125,9 @@ class App(decoroute.App):
 
     def _mangle_response(self, resp):
         """Mangle the response, if warranted."""
-        if (isinstance(resp, Response) and
-            not isinstance(resp, exc.HTTPInternalServerError)):
+        if (isinstance(resp, Response)
+            and not isinstance(resp, (exc.HTTPClientError,
+                                      exc.HTTPServerError))):
             return (resp, None)
 
         if not isinstance(resp, Exception):

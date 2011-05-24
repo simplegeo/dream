@@ -108,6 +108,15 @@ class RenderTest(unittest.TestCase):
         self.assertTrue(isinstance(resp, tuple))
         self.assertTrue(resp[0].startswith("500"))
 
+    def test_bad_request(self):
+        message = "You dun goof'd"
+        ex = exc.HTTPBadRequest(message)
+        (response, headers, body) = self.app._render({}, ex)
+        body = "".join(body)
+        self.assertTrue(len(body) > 0)
+        blab = json.loads(body)
+        self.assertEqual(blab['detail'], message)
+
 
 class GetEndpointsTest(unittest.TestCase):
 
@@ -375,10 +384,19 @@ class MangleResponseTest(unittest.TestCase):
         self.assertFalse(cookie)
         self.assertTrue(resp is ex)
 
-    def test_error_exceptions(self):
+    def test_server_error_exceptions(self):
         """Non-error exceptions shouldn't get mangled a traceback."""
         ex = exc.HTTPInternalServerError()
-        self.assertTrue(self.app._mangle_response(ex) is not ex)
+        (resp, cookie) = self.app._mangle_response(ex)
+        self.assertTrue(resp is not ex)
+        self.assertTrue(cookie)
+
+    def test_client_error_exceptions(self):
+        """Non-error exceptions shouldn't get mangled a traceback."""
+        ex = exc.HTTPBadRequest()
+        (resp, cookie) = self.app._mangle_response(ex)
+        self.assertTrue(resp is not ex)
+        self.assertTrue(cookie)
 
 
 class MultipleExposeTest(unittest.TestCase):
