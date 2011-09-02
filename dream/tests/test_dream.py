@@ -21,11 +21,12 @@ from dream import (App, Request, Response, JSONResponse,
 def _env(**kwargs):
     """Return a stub WSGI environment."""
     return dict({'wsgi.url_scheme': 'http',
-            'SERVER_NAME': 'localhost',
-            'SERVER_PORT': 80,
-            'REQUEST_METHOD': 'GET',
-            'PATH_INFO': '/'
-            }, **kwargs)
+                 'SERVER_NAME': 'localhost',
+                 'SERVER_PORT': 80,
+                 'SERVER_PROTOCOL': 'HTTP/1.1',
+                 'REQUEST_METHOD': 'GET',
+                 'PATH_INFO': '/'
+                 }, **kwargs)
 
 
 class JSONResponseTest(unittest.TestCase):
