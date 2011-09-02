@@ -73,12 +73,13 @@ class App(decoroute.App):
 
         Checks the method-specific map first, then the global as a fallback.
         """
-        env[self._key] = self
-        path, num = self._prefix[1].subn('', env['PATH_INFO'])
-        if num != 1:
-            raise exc.HTTPNotFound()
 
         try:
+            env[self._key] = self
+            path, num = self._prefix[1].subn('', env['PATH_INFO'])
+            if num != 1:
+                raise exc.HTTPNotFound()
+
             endpoint, kwargs = self.map[env['REQUEST_METHOD']].route(path)
             return endpoint(Request(env, charset='utf-8'), **kwargs)
 

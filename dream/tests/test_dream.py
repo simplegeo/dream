@@ -166,9 +166,9 @@ class RouteTest(unittest.TestCase):
 
     def test_prefix_404(self):
         app = App(prefix='/1.0')
-        self.assertRaises(exc.HTTPNotFound, app.route,
-                          {'REQUEST_METHOD': 'GET',
-                           'PATH_INFO': '/foo'})
+        self.assertTrue(isinstance(
+                app.route({'REQUEST_METHOD': 'GET', 'PATH_INFO': '/foo'}),
+                exc.HTTPNotFound))
 
     def test_nonprefix_404(self):
         app = App()
