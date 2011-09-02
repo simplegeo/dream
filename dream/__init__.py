@@ -103,6 +103,8 @@ class App(decoroute.App):
         Checks the method-specific map first, then the global as a fallback.
         """
 
+        request = self.make_request(env, charset='utf-8')
+
         try:
             env[self._key] = self
             path, num = self._prefix[1].subn('', env['PATH_INFO'])
@@ -110,19 +112,18 @@ class App(decoroute.App):
                 raise exc.HTTPNotFound()
 
             endpoint, kwargs = self.map[env['REQUEST_METHOD']].route(path)
-            request = self.make_request(env, charset='utf-8')
-            return endpoint(request, **kwargs)
+            return (request, endpoint(request, **kwargs))
 
         except decoroute.NotFound, nfex:
             new_ex = exc.HTTPNotFound(" ".join(nfex.args))
             if not hasattr(new_ex, '__traceback__'):
                 new_ex.__traceback__ = sys.exc_info()[-1]
-            return new_ex
+            return (request, new_ex)
 
         except Exception, ex:
             if not hasattr(ex, '__traceback__'):
                 ex.__traceback__ = sys.exc_info()[-1]
-            return ex
+            return (request, ex)
 
     def expose(self, pattern, method="GET", function=None, **kwargs):
         """Register a URL pattern for a specific HTTP method."""
@@ -136,14 +137,12 @@ class App(decoroute.App):
 
         return decorate(function) if function else decorate
 
-    def _log_response(self, env, resp):
+    def _log_response(self, req, resp):
         """Log this response in the access log."""
         self.logs['access'].log(
             _RESP_LEVELS.get(resp.status_int - (resp.status_int % 100),
                              logging.ERROR),
-            "%s %d %s %s?%s", env.get('HTTP_X_SIMPLEGEO_USER', "anon"),
-            resp.status_int, env.get('REQUEST_METHOD', "?GET?"),
-            env.get('PATH_INFO', '/???'), env.get('QUERY_STRING', " ?QS?"))
+            "%d %s %s", resp.status_int, req.method, req.url)
 
     def format_traceback(self, resp):
         """Return a formatted traceback, suitable for logging.
@@ -154,12 +153,12 @@ class App(decoroute.App):
         return ';'.join(line.strip().replace("\n", ':') for line in
                         _format_traceback(resp))
 
-    def _mangle_response(self, resp):
+    def _mangle_response(self, req, resp):
         """Mangle the response, if warranted."""
         if (isinstance(resp, Response)
             and not isinstance(resp, (exc.HTTPClientError,
                                       exc.HTTPServerError))):
-            return (resp, None)
+            return resp
 
         if not isinstance(resp, Exception):
             resp = Exception("Expected a Response object, got %s instead." %
@@ -168,8 +167,7 @@ class App(decoroute.App):
 
         func = (_debug_exception_to_reponse if self.debug
                 else _exception_to_response)
-        error_cookie = uuid1().hex
-        return (func(resp, error_cookie), error_cookie)
+        return func(req, resp)
 
     def _get_error_logger(self, env):
         """Return an error logger for this request."""
@@ -186,16 +184,16 @@ class App(decoroute.App):
                                                          sys.stderr)))
         return log
 
-    def _render_response(self, env, in_resp):
+    def _render_response(self, env, (request, in_resp)):
         """Render the Response object into WSGI format."""
 
-        (resp, cookie) = self._mangle_response(in_resp)
-        if cookie:
+        resp = self._mangle_response(request, in_resp)
+        if isinstance(resp, (exc.HTTPClientError, exc.HTTPServerError)):
             self._get_error_logger(env).error(
-                "Cookie %s: %s %s", cookie, repr(in_resp),
+                "Request-Id %s: %s %s", request.id, repr(in_resp),
                 self.format_traceback(in_resp))
 
-        self._log_response(env, resp)
+        self._log_response(request, resp)
         return (resp.status, resp.headers.items(), resp.app_iter)
 
     def endpoints(self):
@@ -220,7 +218,7 @@ def _format_traceback(exc_):
         extract_tb(exc_.__traceback__))
 
 
-def _debug_exception_to_reponse(exception, cookie=None):
+def _debug_exception_to_reponse(request, exception):
     """Return a JSONResponse representing an uncaught Exception.
 
     This includes detailed information for debugging, and should not
@@ -231,10 +229,10 @@ def _debug_exception_to_reponse(exception, cookie=None):
         body={'detail': "Caught exception %s: %s" % (
                 type(exception), str(exception)),
               'traceback': _format_traceback(exception),
-              'cookie': cookie})
+              'request_id': request.id})
 
 
-def _exception_to_response(exception, cookie=None):
+def _exception_to_response(request, exception):
     """Return a JSONResponse representing an uncaught Exception.
 
     This doesn't include any debug information, and is suitable for
@@ -243,9 +241,8 @@ def _exception_to_response(exception, cookie=None):
     return JSONResponse(
         body={'detail': (exception.detail or exception.explanation)
               if isinstance(exception, exc.HTTPException) else
-              "An internal error occured. "
-              "If it makes you feel better, have a cookie.",
-              'cookie': cookie},
+              "An internal error occured.",
+              'request_id': request.id},
         status=getattr(exception, 'status', 500))
 
 

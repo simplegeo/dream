@@ -18,6 +18,16 @@ from dream import (App, Request, Response, JSONResponse,
                    _debug_exception_to_reponse, _format_traceback)
 
 
+def _env(**kwargs):
+    """Return a stub WSGI environment."""
+    return dict({'wsgi.url_scheme': 'http',
+            'SERVER_NAME': 'localhost',
+            'SERVER_PORT': 80,
+            'REQUEST_METHOD': 'GET',
+            'PATH_INFO': '/'
+            }, **kwargs)
+
+
 class JSONResponseTest(unittest.TestCase):
 
     """Test the JSONResponse."""
@@ -88,30 +98,30 @@ class RenderTest(unittest.TestCase):
 
     def test_httpexception(self):
         ex = exc.HTTPNotFound(detail="test")
-        out = self.app._render({}, ex)
+        out = self.app._render({}, (Request(_env()), ex))
         self.assertTrue(out[0].startswith('404'))
 
     def test_non_httpexception(self):
         ex = ValueError("WTF")
-        out = self.app._render({}, ex)
+        out = self.app._render({}, (Request(_env()), ex))
         self.assertTrue(out[0].startswith("500"))
 
     def test_json_type(self):
         ex = ValueError("WTF")
-        out = self.app._render({}, ex)
+        out = self.app._render({}, (Request(_env()), ex))
         headers = dict(out[1])
         self.assertTrue('Content-Type' in headers)
         self.assertEqual(headers['Content-Type'], 'application/json')
 
     def test_bad_response(self):
-        resp = self.app._render({}, "foo")
+        resp = self.app._render({}, (Request(_env()), "foo"))
         self.assertTrue(isinstance(resp, tuple))
         self.assertTrue(resp[0].startswith("500"))
 
     def test_bad_request(self):
         message = "You dun goof'd"
         ex = exc.HTTPBadRequest(message)
-        (response, headers, body) = self.app._render({}, ex)
+        (response, headers, body) = self.app._render({}, (Request(_env()), ex))
         body = "".join(body)
         self.assertTrue(len(body) > 0)
         blab = json.loads(body)
@@ -146,10 +156,9 @@ class EndpointsTest(unittest.TestCase):
         self.assertTrue('GET /endpoints' in self.app.endpoints().keys())
 
     def test_endpoints_reponse(self):
-        self.assertTrue(isinstance(
-                self.app.route({'REQUEST_METHOD': 'GET',
-                                'PATH_INFO': '/endpoints'}),
-                HumanReadableJSONResponse))
+        (request, response) = self.app.route({'REQUEST_METHOD': 'GET',
+                                              'PATH_INFO': '/endpoints'})
+        self.assertTrue(isinstance(response, HumanReadableJSONResponse))
 
     def test_has_prefix(self):
         """Make sure endpoint URLs include the prefix."""
@@ -167,21 +176,19 @@ class RouteTest(unittest.TestCase):
     def test_prefix_404(self):
         app = App(prefix='/1.0')
         self.assertTrue(isinstance(
-                app.route({'REQUEST_METHOD': 'GET', 'PATH_INFO': '/foo'}),
+                app.route({'REQUEST_METHOD': 'GET', 'PATH_INFO': '/foo'})[1],
                 exc.HTTPNotFound))
 
     def test_nonprefix_404(self):
         app = App()
-        resp = app.route({'REQUEST_METHOD': 'GET',
-                          'PATH_INFO': '/foo'})
+        (req, resp) = app.route({'REQUEST_METHOD': 'GET', 'PATH_INFO': '/foo'})
         self.assertTrue(isinstance(resp, exc.HTTPNotFound))
 
     def test_success(self):
         response = Response(body="Hi")
         app = App()
         app.expose('/')(lambda request: response)
-        resp = app.route({'REQUEST_METHOD': 'GET',
-                           'PATH_INFO': '/'})
+        (req, resp) = app.route({'REQUEST_METHOD': 'GET', 'PATH_INFO': '/'})
         self.assertTrue(resp is response)
 
     def test_generates_request(self):
@@ -195,8 +202,7 @@ class RouteTest(unittest.TestCase):
             self.assert_(isinstance(request, Request))
             return Response()
 
-        resp = app.route({'REQUEST_METHOD': 'GET',
-                            'PATH_INFO': "/foo"})
+        (req, resp) = app.route({'REQUEST_METHOD': 'GET', 'PATH_INFO': "/foo"})
         self.assert_(len(runs) == 1)
 
     def test_http_exceptions_returned(self):
@@ -208,7 +214,7 @@ class RouteTest(unittest.TestCase):
         def test_f(request):
             raise ex
 
-        resp = app.route({'REQUEST_METHOD': 'GET',
+        (req, resp) = app.route({'REQUEST_METHOD': 'GET',
                             'PATH_INFO': "/foo"})
         self.assert_(resp is ex)
 
@@ -221,7 +227,7 @@ class RouteTest(unittest.TestCase):
         def test_f(request):
             raise ex
 
-        resp = app.route({'REQUEST_METHOD': 'GET',
+        (req, resp) = app.route({'REQUEST_METHOD': 'GET',
                             'PATH_INFO': "/foo"})
         self.assert_(resp is ex)
 
@@ -240,71 +246,64 @@ class RouteTest(unittest.TestCase):
 
 class ExceptionToResponseTest(unittest.TestCase):
 
+    def setUp(self):
+        self.func = _exception_to_response
+
     def test_types(self):
-        resp = _exception_to_response(Exception("foo"))
+        resp = self.func(Request(_env()), Exception("foo"))
         self.assertTrue(isinstance(resp, Response))
 
     def test_status(self):
         """Make sure webob exception statuses are preserved."""
         not_found = exc.HTTPNotFound("Sorry")
-        resp = _exception_to_response(not_found)
+        resp = self.func(Request(_env()), not_found)
         self.assertEqual(not_found.status, resp.status)
 
     def test_has_detail(self):
         """Make sure there's error detail."""
-        resp = _exception_to_response(Exception("foo"), "cookie")
+        resp = self.func(Request(_env()), Exception("foo"))
         body = json.loads(resp.body)
         self.assertTrue('detail' in body)
 
     def test_has_cookie(self):
         """Make sure the cookie is included."""
-        resp = _exception_to_response(Exception("foo"), "cookie")
+        req = Request(_env())
+        resp = self.func(req, Exception("foo"))
         body = json.loads(resp.body)
-        self.assertTrue('cookie' in body)
-        self.assertEqual(body['cookie'], 'cookie')
+        self.assertTrue('request_id' in body)
+        self.assertEqual(body['request_id'], req.id)
 
     def test_no_traceback(self):
         """Make sure there is no traceback."""
-        resp = _exception_to_response(Exception("foo"), "cookie")
+        resp = self.func(Request(_env()), Exception("foo"))
         self.assertFalse('traceback' in json.loads(resp.body))
 
     def test_httpexception_message(self):
         """Make sure the message from a HTTPException is preserved."""
         msg = "foo"
-        resp = _exception_to_response(exc.HTTPBadRequest(msg), "cookie")
+        resp = self.func(Request(_env()), exc.HTTPBadRequest(msg))
         self.assertEqual(json.loads(resp.body)['detail'], msg)
 
     def test_exception_message(self):
         """Make sure the message from a non-HTTPException is elided."""
         msg = "Something went terribly wrong"
-        resp = _exception_to_response(ValueError(msg), "cookie")
+        resp = self.func(Request(_env()), ValueError(msg))
         self.assertNotEqual(json.loads(resp.body)['detail'], msg)
 
 
-class DebugExceptionToResponseTest(unittest.TestCase):
+class DebugExceptionToResponseTest(ExceptionToResponseTest):
 
-    def test_types(self):
-        resp = _debug_exception_to_reponse(Exception("foo"))
-        self.assertTrue(isinstance(resp, Response))
+    def setUp(self):
+        ExceptionToResponseTest.setUp(self)
+        self.func = _debug_exception_to_reponse
 
-    def test_status(self):
-        """Make sure webob exception statuses are preserved."""
-        not_found = exc.HTTPNotFound("Sorry")
-        resp = _debug_exception_to_reponse(not_found)
-        self.assertEqual(not_found.status, resp.status)
-
-    def test_has_detail(self):
-        """Make sure there's error detail."""
-        resp = _debug_exception_to_reponse(Exception("foo"), "cookie")
+    def test_httpexception_message(self):
+        """Make sure the message from a HTTPException is preserved."""
+        msg = "foo"
+        resp = self.func(Request(_env()), exc.HTTPBadRequest(msg))
         body = json.loads(resp.body)
-        self.assertTrue('detail' in body)
-
-    def test_has_cookie(self):
-        """Make sure the cookie is included."""
-        resp = _debug_exception_to_reponse(Exception("foo"), "cookie")
-        body = json.loads(resp.body)
-        self.assertTrue('cookie' in body)
-        self.assertEqual(body['cookie'], 'cookie')
+        self.assertTrue(msg in body['detail'])
+        self.assertTrue('HTTPBadRequest' in body['detail'])
 
     def test_traceback_object(self):
         """Make sure tracebacks are included when they're objects."""
@@ -313,14 +312,14 @@ class DebugExceptionToResponseTest(unittest.TestCase):
         except Exception, ex:
             ex.__traceback__ = sys.exc_info()[-1]
 
-        resp = _debug_exception_to_reponse(ex, "cookie")
+        resp = self.func(Request(_env()), ex)
         body = json.loads(resp.body)
         self.assertTrue('traceback' in body)
         self.assertNotEqual(body['traceback'], "No traceback available.")
 
     def test_no_traceback(self):
         """Make sure lack of tracebacks doesn't break Dream."""
-        resp = _debug_exception_to_reponse(Exception("foo"), "cookie")
+        resp = self.func(Request(_env()), Exception("foo"))
         body = json.loads(resp.body)
         self.assertTrue('traceback' in body)
         self.assertEqual(body['traceback'], ["No traceback available"])
@@ -337,18 +336,16 @@ class DebugTest(unittest.TestCase):
     def test_debug_exceptions(self):
         """Make sure exceptions are handled properly based on debug."""
         app = App(debug=True)
-        (resp, cookie) = app._mangle_response(
-            exc.HTTPInternalServerError("Whops"))
+        resp = app._mangle_response(
+            Request(_env()), exc.HTTPInternalServerError("Whops"))
         self.assertTrue('traceback' in json.loads(resp.body))
-        self.assertTrue(cookie)
 
     def test_nondebug_exceptions(self):
         """Make sure exceptions are handled properly based on debug."""
         app = App(debug=False)
-        (resp, cookie) = app._mangle_response(
-            exc.HTTPInternalServerError("Whops"))
+        resp = app._mangle_response(
+            Request(_env()), exc.HTTPInternalServerError("Whops"))
         self.assertFalse('traceback' in json.loads(resp.body))
-        self.assertTrue(cookie)
 
 
 class MangleResponseTest(unittest.TestCase):
@@ -361,8 +358,7 @@ class MangleResponseTest(unittest.TestCase):
     def test_exceptions(self):
         """Make sure exceptions are handled properly."""
         exc = ValueError("Expected some cheese.")
-        (resp, cookie) = self.app._mangle_response(exc)
-        self.assertTrue(cookie)
+        resp = self.app._mangle_response(Request(_env()), exc)
         body = json.loads(resp.body)
         self.assertTrue(body['detail'].startswith('Caught exception ' +
                                                   str(type(exc))))
@@ -372,7 +368,7 @@ class MangleResponseTest(unittest.TestCase):
         ex = Exception("foo")
         ex.__traceback__ = traceback.extract_stack()
 
-        resp = _debug_exception_to_reponse(ex, "cookie")
+        resp = _debug_exception_to_reponse(Request(_env()), ex)
         body = json.loads(resp.body)
         self.assertTrue('traceback' in body)
         self.assertNotEqual(body['traceback'], ["No traceback available."])
@@ -380,23 +376,20 @@ class MangleResponseTest(unittest.TestCase):
     def test_nonerror_exceptions(self):
         """Non-error exceptions shouldn't get mangled a traceback."""
         ex = exc.HTTPMovedPermanently(headers={'Location': "/foo.json"})
-        (resp, cookie) = self.app._mangle_response(ex)
-        self.assertFalse(cookie)
+        resp = self.app._mangle_response(Request(_env()), ex)
         self.assertTrue(resp is ex)
 
     def test_server_error_exceptions(self):
         """Non-error exceptions shouldn't get mangled a traceback."""
         ex = exc.HTTPInternalServerError()
-        (resp, cookie) = self.app._mangle_response(ex)
+        resp = self.app._mangle_response(Request(_env()), ex)
         self.assertTrue(resp is not ex)
-        self.assertTrue(cookie)
 
     def test_client_error_exceptions(self):
         """Non-error exceptions shouldn't get mangled a traceback."""
         ex = exc.HTTPBadRequest()
-        (resp, cookie) = self.app._mangle_response(ex)
+        resp = self.app._mangle_response(Request(_env()), ex)
         self.assertTrue(resp is not ex)
-        self.assertTrue(cookie)
 
 
 class MultipleExposeTest(unittest.TestCase):
@@ -411,8 +404,8 @@ class MultipleExposeTest(unittest.TestCase):
         def endpoint(request):
             return Response(body="Hi.")
 
-        resp = app.route({'REQUEST_METHOD': "GET",
-                          'PATH_INFO': "/foo"})
+        (req, resp) = app.route({'REQUEST_METHOD': "GET",
+                                 'PATH_INFO': "/foo"})
         self.assertTrue(isinstance(resp, Response))
         self.assertFalse(isinstance(resp, exc.HTTPError))
         self.assertTrue(resp.body == "Hi.")
@@ -479,14 +472,19 @@ class RequestTest(unittest.TestCase):
     """Test Dream's request object."""
 
     def test_has_id(self):
-        self.assertTrue(hasattr(Request({}), 'id'))
+        self.assertTrue(hasattr(Request(_env()), 'id'))
 
     def test_id_immutable(self):
-        x = Request({})
+        x = Request(_env())
         self.assertEqual(x.id, x.id)
 
     def test_id_unique(self):
-        self.assertNotEqual(Request({}).id, Request({}).id)
+        self.assertNotEqual(Request(_env()).id, Request(_env()).id)
+
+    def test_provide_id(self):
+        x = Request(_env(), id=123)
+        self.assertEqual(x.id, 123)
+
 
 
 
