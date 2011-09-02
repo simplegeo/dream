@@ -93,6 +93,10 @@ class App(decoroute.App):
         self.logs['access'] = logging.getLogger('dream.access')
         self.logs['error'] = logging.getLogger('dream.error')
 
+    def make_request(self, env, **kwargs):
+        """Return a new Request object for this env."""
+        return Request(env, **kwargs)
+
     def route(self, env):
         """Route a request.
 
@@ -106,7 +110,8 @@ class App(decoroute.App):
                 raise exc.HTTPNotFound()
 
             endpoint, kwargs = self.map[env['REQUEST_METHOD']].route(path)
-            return endpoint(Request(env, charset='utf-8'), **kwargs)
+            request = self.make_request(env, charset='utf-8')
+            return endpoint(request, **kwargs)
 
         except decoroute.NotFound, nfex:
             new_ex = exc.HTTPNotFound(" ".join(nfex.args))
