@@ -1,3 +1,17 @@
+dream (1.0.79) maverick; urgency=low
+
+  [ Ian Eure ]
+  * Add `Request` object with an `id` attribute.
+  * Add `make_request` function so we can overload request creation.
+  * Add coverage commands to Makefile.
+  * Return `(request, response)` from `route()`, update code & tests to
+    cope. Replace error `cookie` with `request_id`.
+  * Add missing SERVER_PROTOCOL to _env() helper.
+
+  [ SimpleGeo Nerds ]
+
+ -- SimpleGeo Nerds <nerds@simplegeo.com>  Fri, 02 Sep 2011 21:23:00 +0000
+
 dream (1.0.78) maverick; urgency=low
 
   [ Ian Eure ]
