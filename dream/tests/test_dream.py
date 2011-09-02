@@ -474,5 +474,21 @@ class TestHidden(unittest.TestCase):
         self.assertFalse(app.endpoints())
 
 
+class RequestTest(unittest.TestCase):
+
+    """Test Dream's request object."""
+
+    def test_has_id(self):
+        self.assertTrue(hasattr(Request({}), 'id'))
+
+    def test_id_immutable(self):
+        x = Request({})
+        self.assertEqual(x.id, x.id)
+
+    def test_id_unique(self):
+        self.assertNotEqual(Request({}).id, Request({}).id)
+
+
+
 if __name__ == '__main__':
     unittest.main()

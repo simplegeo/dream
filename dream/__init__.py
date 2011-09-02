@@ -17,7 +17,8 @@ from itertools import chain
 from traceback import format_list, extract_stack, extract_tb
 
 import decoroute
-from webob import Request, Response, exc
+from webob import Request as WebObRequest, Response, exc
+from webob.request import NoDefault
 
 
 _RESP_LEVELS = {100: logging.INFO,
@@ -25,6 +26,30 @@ _RESP_LEVELS = {100: logging.INFO,
                 300: logging.INFO,
                 400: logging.WARN,
                 500: logging.ERROR}
+
+
+class Request(WebObRequest):
+
+    """Dream request object."""
+
+    def __init__(self, environ, charset=NoDefault,
+                 unicode_errors=NoDefault,
+                 decode_param_names=NoDefault, **kw):
+        self._id = None
+        WebObRequest.__init__(
+            self, environ, charset=charset, unicode_errors=unicode_errors,
+            decode_param_names=decode_param_names, **kw)
+
+    def _id__get(self):
+        if not self._id:
+            self._id = uuid1().hex
+
+        return self._id
+
+    def _id__set(self, value):
+        self._id = value
+
+    id = property(_id__get, _id__set)
 
 
 class JSONResponse(Response):
