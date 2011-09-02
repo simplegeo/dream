@@ -12,5 +12,6 @@
 /xunit.xml
 /.coverage
 /coverage.xml
+/coverage
 *,cover
 *.pyc
