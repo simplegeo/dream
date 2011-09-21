@@ -49,6 +49,11 @@ class JSONResponseTest(unittest.TestCase):
         resp = self.resp_class(body=body)
         self.assert_(json.loads(resp.body) == body)
 
+    def test_no_body(self):
+        """Make sure JSONResponses with no body work."""
+        resp = self.resp_class(status=304)
+        self.assertEqual(resp.body, "")
+
 
 class HumanReadableJSONResponseTest(JSONResponseTest):
 
@@ -485,8 +490,6 @@ class RequestTest(unittest.TestCase):
     def test_provide_id(self):
         x = Request(_env(), id=123)
         self.assertEqual(x.id, 123)
-
-
 
 
 if __name__ == '__main__':

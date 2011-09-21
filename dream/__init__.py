@@ -59,11 +59,13 @@ class JSONResponse(Response):
     default_content_type = 'application/json'
 
     def __init__(self, **kwargs):
-        Response.__init__(self, body=self.serialize(kwargs.pop('body')),
+        Response.__init__(self, body=self.serialize(kwargs.pop('body', None)),
                           **kwargs)
 
     def serialize(self, obj):
         """Return this object as a JSON string."""
+        if obj is None:
+            return ""
         return json.dumps(obj)
 
 
@@ -72,6 +74,8 @@ class HumanReadableJSONResponse(JSONResponse):
     """A response in JSON format, with formatting for human readability"""
 
     def serialize(self, obj):
+        if obj is None:
+            return ""
         return json.dumps(obj, indent=4)
 
 
